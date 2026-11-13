@@ -4,10 +4,10 @@
 
 import { iso, mkHand, lerp, streamOf, clamp } from '../engine/press.ts'
 import { WALL_H, roomBounds, roomOrigin } from '../engine/world.ts'
-import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
+import { depthOf, drawThing, screenBox, sizeOf, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
-import { drawHana, talkLift } from '../engine/hana-sprite.ts'
+import { drawHana, talkLift, HANA_H } from '../engine/hana-sprite.ts'
 import { createActor, poke, poseOf, setLive, step, type Actor } from './actors.ts'
 import type { RoomPlan } from '../layout.ts'
 import type { Item } from '../types.ts'
@@ -17,6 +17,43 @@ const ZOOMS = [0.3, 0.36, 0.42, 0.5, 0.56, 0.62, 0.7, 0.8, 0.9, 1, 1.15, 1.3, 1.
 const MAX_RATIO = 3
 const SCALE = 1.3 // how big a mascot stands in its room
 const FOCUS_MS = 900
+
+const NEON_Z: Record<string, number> = { desk: 0.86, sofa: 0.82, 'bot-bed': 0.22 }
+
+function neonRim(H: ReturnType<typeof mkHand>, it: Item, k: Kind) {
+  const [w, d] = sizeOf(k, it)
+  const z = (it.at.z || 0) + (NEON_Z[it.kind] ?? 0.8)
+  const P = [
+    iso(it.at.i, it.at.j, z),
+    iso(it.at.i + w, it.at.j, z),
+    iso(it.at.i + w, it.at.j + d, z),
+    iso(it.at.i, it.at.j + d, z),
+  ]
+  const c = H.ctx()
+  c.save()
+  c.lineJoin = 'round'
+  c.lineCap = 'round'
+  c.strokeStyle = 'rgba(143, 224, 221, 0.55)'
+  c.lineWidth = 1.35
+  c.shadowColor = 'rgba(143, 224, 221, 0.45)'
+  c.shadowBlur = 5
+  c.beginPath()
+  c.moveTo(P[0][0], P[0][1])
+  for (const q of P.slice(1)) c.lineTo(q[0], q[1])
+  c.closePath()
+  c.stroke()
+  // A thin red/pink edge on the front-right lip, matching Hana's streak.
+  c.shadowColor = 'rgba(255, 90, 140, 0.4)'
+  c.shadowBlur = 4
+  c.strokeStyle = 'rgba(255, 90, 140, 0.4)'
+  c.lineWidth = 1
+  c.beginPath()
+  c.moveTo(P[1][0], P[1][1])
+  c.lineTo(P[2][0], P[2][1])
+  c.stroke()
+  c.restore()
+}
+
 
 // Diagonal pen strokes, one tile repeated: the hatching of drawn shadows.
 const HATCH_PX = 6
@@ -112,11 +149,13 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       y0: bx.y0,
       cv: printed(bx.x1 - bx.x0, bx.y1 - bx.y0, ratio, bx.x0, bx.y0, (c) => {
         const H = mkHand(c, { seed: 1 })
-        drawThing(H, streamOf('item', it.id), k, it, {})
+        const future = rooms.get(it.room)?.plan.room.look === 'future'
+        drawThing(H, streamOf('item', it.id), k, it, {}, { shadow: future ? false : undefined })
         if (it.kind === 'monitor') {
           const [x, y] = iso(it.at.i + 0.45, it.at.j + 0.12, (it.at.z ?? 0) + 0.42)
           H.glow(x, y, 26, 18, 'teal', 0.6)
         }
+        if (future && (it.kind === 'desk' || it.kind === 'sofa' || it.kind === 'bot-bed')) neonRim(H, it, k)
       }),
     }
     sprites.set(key, s)
@@ -250,7 +289,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
           const look = looks.get(th.actor.id)!
           const pose = poseOf(th.actor, t, now)
           pose.lift += talkLift(th.actor.id, t)
-          if (look.shape === 'hana') drawHana(mkHand(ctx, { seed: 5 }), pose, th.actor.mood)
+          if (look.shape === 'hana') drawHana(mkHand(ctx, { seed: 5 }), pose, th.actor.mood, th.actor.id)
           else drawMascot(mkHand(ctx, { seed: 5 }), look, pose)
           ctx.restore()
           continue
@@ -279,9 +318,10 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       const R = rooms.get(id)
       if (!R) continue
       const p = actorScreen(R, a)
-      const cy = p.y - (BODY / 2 + a.z * 32 + 4) * SCALE
+      const body = looks.get(id)?.shape === 'hana' ? HANA_H : BODY
+      const cy = p.y - (body / 2 + a.z * 32 + 4) * SCALE
       const d = Math.hypot(wx - p.x, wy - cy)
-      if (d < BODY * SCALE * 0.75 && (!best || d < best.d)) best = { id, d }
+      if (d < body * SCALE * 0.75 && (!best || d < best.d)) best = { id, d }
     }
     if (best) return { botId: best.id, bot: true }
     // Then the room whose floor diamond (or walls above it) is under the pointer.
@@ -460,7 +500,8 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       const a = actors.get(botId)
       if (!R || !a) return null
       const p = actorScreen(R, a)
-      const head = { x: devX(p.x) / dpr, y: devY(p.y - (BODY + 8 + a.z * 32) * SCALE) / dpr }
+      const body = looks.get(botId)?.shape === 'hana' ? HANA_H : BODY
+      const head = { x: devX(p.x) / dpr, y: devY(p.y - (body + 14 + a.z * 32) * SCALE) / dpr }
       // The sign hangs over the room's back corner, the top of its box.
       const corner = iso(0, 0, WALL_H)
       const sign = { x: devX(R.ox + corner[0]) / dpr, y: devY(R.oy + corner[1] - 10) / dpr }

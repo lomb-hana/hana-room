@@ -614,7 +614,7 @@ function resolve(s: ShapeFields, kind: Kind, item: Item): ShapeFields {
 }
 export const sizeOf = (kind: Kind, item: Item): [number, number] => item.size || kind.size
 
-export function drawThing(H: Hand, R: Rng, kind: Kind, item: Item, images: Record<string, HTMLImageElement | null>, o: { fine?: boolean; lw?: number } = {}) {
+export function drawThing(H: Hand, R: Rng, kind: Kind, item: Item, images: Record<string, HTMLImageElement | null>, o: { fine?: boolean; lw?: number; shadow?: boolean } = {}) {
   const c: ThingCtx = {
     pl: placer(item.at, sizeOf(kind, item)),
     col: colOf(kind, item),
@@ -624,7 +624,7 @@ export function drawThing(H: Hand, R: Rng, kind: Kind, item: Item, images: Recor
     fine: o.fine ?? (kind.fine || false),
     lw: o.lw,
   }
-  if (kind.place !== 'wall' && kind.place !== 'rug' && kind.shadow !== false) {
+  if (o.shadow !== false && kind.place !== 'wall' && kind.place !== 'rug' && kind.shadow !== false) {
     const [w, d] = c.pl.size(...sizeOf(kind, item))
     shadowBox(H, item.at.i, item.at.j, w, d, item.at.z || 0, (kind.height ?? 1) * 0.7, 0.2)
   }

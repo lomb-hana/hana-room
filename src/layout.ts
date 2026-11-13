@@ -261,8 +261,8 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
       { kind: 'snake-plant', at: { i: 0.15, j: 0.15, face: 'ne' }, colors: { pot: 'charcoal', leaf: 'teal' } },
     ]
     def.work = [
-      { i: 6.15, j: 1.55, face: 'ne', act: 'type' },
-      { i: 6.55, j: 1.55, face: 'ne', act: 'type' },
+      { i: 6.2, j: 1.32, face: 'ne', act: 'type' },
+      { i: 6.55, j: 1.32, face: 'ne', act: 'type' },
     ]
   }
   const room: Room = {
