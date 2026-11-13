@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 SECRET_FILE="${HANA_ROOM_SECRET_FILE:-$HOME/.hana-room-secret}"
-ROOM_URL="${HANA_ROOM_URL:-https://hana-room.onrender.com}"
+ROOM_URL="${HANA_ROOM_URL:-https://hana-room-web.onrender.com}"
 
 usage() {
   cat <<USAGE

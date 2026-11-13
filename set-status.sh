@@ -8,7 +8,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 STATUS_FILE="$ROOT/public/status.json"
 SECRET_FILE="${HANA_ROOM_SECRET_FILE:-$HOME/.hana-room-secret}"
-ROOM_URL="${HANA_ROOM_URL:-https://hana-room.onrender.com}"
+ROOM_URL="${HANA_ROOM_URL:-https://hana-room-web.onrender.com}"
 LOCAL_ONLY=0
 STATE=""
 TEXT=""

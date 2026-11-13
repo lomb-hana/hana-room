@@ -25,8 +25,8 @@ const HOUR_MS = 60 * 60 * 1000
 fs.mkdirSync(DATA, { recursive: true })
 
 const defaultStatus = () => ({
-  state: 'free-time',
-  text: 'Testing my new room',
+  state: 'idle',
+  text: 'Moved into my new iso room',
   updated: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
 })
 
