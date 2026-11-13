@@ -1,0 +1,347 @@
+:root {
+  --night: #16121f;
+  --night-soft: #2a2438;
+  --frame: #3a3048;
+  --paper: #f6ead8;
+  --ink: #f6ead8;
+  --muted: #c8bdd6;
+  --working: #e8b86d;
+  --free: #9db89a;
+  --idle: #c5b3d6;
+  --waiting: #f0d27a;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  min-height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 0%, #322a44 0%, var(--night) 62%);
+  color: var(--ink);
+  font-family: "Nunito", system-ui, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+}
+
+main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px 48px;
+  gap: 14px;
+}
+
+header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+h1 {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(1.8rem, 3vw, 2.25rem);
+  letter-spacing: 0.01em;
+  color: #f8f0e4;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--paper);
+  font-weight: 650;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--free);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--free) 25%, transparent);
+}
+
+.stage[data-state="working"] ~ * .dot,
+.stage[data-state="working"] .dot {
+  background: var(--working);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--working) 25%, transparent);
+}
+
+header .chip .dot {
+  background: var(--free);
+}
+
+main:has(.stage[data-state="working"]) .dot { background: var(--working); box-shadow: 0 0 0 4px color-mix(in srgb, var(--working) 25%, transparent); }
+main:has(.stage[data-state="free-time"]) .dot { background: var(--free); box-shadow: 0 0 0 4px color-mix(in srgb, var(--free) 25%, transparent); }
+main:has(.stage[data-state="idle"]) .dot { background: var(--idle); box-shadow: 0 0 0 4px color-mix(in srgb, var(--idle) 25%, transparent); }
+main:has(.stage[data-state="waiting"]) .dot { background: var(--waiting); box-shadow: 0 0 0 4px color-mix(in srgb, var(--waiting) 25%, transparent); }
+
+.frame {
+  width: min(920px, 100%);
+  background: linear-gradient(180deg, #4a3f5c 0%, var(--frame) 100%);
+  padding: 11px;
+  border-radius: 22px;
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.stage {
+  position: relative;
+  background: #f6ead8;
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+.stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hana {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.stage[data-state="working"] .hana-working,
+.stage[data-state="free-time"] .hana-free,
+.stage[data-state="idle"] .hana-idle,
+.stage[data-state="waiting"] .hana-waiting {
+  opacity: 1;
+  visibility: visible;
+}
+
+.overlay {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.4s ease;
+}
+
+.stage[data-state="working"] .bubble,
+.stage[data-state="waiting"] .question,
+.stage[data-state="idle"] .zzz,
+.stage[data-state="free-time"] .notes {
+  opacity: 1;
+  visibility: visible;
+}
+
+.bubble {
+  left: 46%;
+  top: 22%;
+  max-width: 230px;
+  background: #fffaf3;
+  color: #3a2e28;
+  border-radius: 16px 16px 16px 6px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 24px rgba(60, 40, 30, 0.16);
+  transform: translateY(0);
+}
+
+.bubble::after {
+  content: "";
+  position: absolute;
+  left: 28px;
+  bottom: -8px;
+  width: 14px;
+  height: 14px;
+  background: #fffaf3;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.question {
+  left: 48%;
+  top: 18%;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: #fffaf3;
+  color: #5a4638;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 700;
+  font-size: 1.6rem;
+  border-radius: 50%;
+  box-shadow: 0 10px 24px rgba(60, 40, 30, 0.16);
+  animation: bob 1.6s ease-in-out infinite;
+}
+
+.zzz {
+  left: 74%;
+  right: auto;
+  top: 45%;
+  color: #5c4e74;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  font-size: 1.7rem;
+  letter-spacing: 0.08em;
+}
+
+.zzz span {
+  display: inline-block;
+  opacity: 0;
+  animation: zzz 3s ease-in-out infinite;
+}
+
+.zzz span:nth-child(2) { animation-delay: 1s; font-size: 1.15rem; }
+.zzz span:nth-child(3) { animation-delay: 2s; font-size: 0.95rem; }
+
+.notes {
+  left: 30%;
+  top: 30%;
+  color: #3f5a40;
+  font-size: 1.45rem;
+}
+
+.notes span {
+  display: inline-block;
+  animation: notes 2.8s ease-in-out infinite;
+}
+
+.notes span:nth-child(2) { animation-delay: 1.2s; }
+
+.updated {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.hint {
+  color: #8d829c;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* In-scene animations */
+@keyframes type {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(0, 2.2px); }
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(-18deg); }
+  50% { transform: rotate(22deg); }
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-1.6deg) translateY(0); }
+  50% { transform: rotate(1.8deg) translateY(1.5px); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2px); }
+}
+
+@keyframes blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.08); }
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes rain {
+  from { transform: translateY(-80px); }
+  to { transform: translateY(200px); }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes zzz {
+  0% { opacity: 0; transform: translate(0, 8px) scale(0.8); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(16px, -26px) scale(1.05); }
+}
+
+@keyframes notes {
+  0% { opacity: 0; transform: translate(0, 8px) rotate(-8deg); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(10px, -28px) rotate(12deg); }
+}
+
+@keyframes leaf {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(5deg); }
+}
+
+.hands { animation: type 0.38s ease-in-out infinite; }
+.arm-wave {
+  transform-box: fill-box;
+  transform-origin: 7px 2px;
+  animation: wave 1.15s ease-in-out infinite;
+}
+.hana-free-root { transform-origin: 50% 80%; animation: sway 3.2s ease-in-out infinite; }
+.hana-idle-root { animation: breathe 3.6s ease-in-out infinite; }
+.eyes { transform-origin: center; transform-box: fill-box; animation: blink 4.8s ease-in-out infinite; }
+.screen-glow { animation: glow 2.2s ease-in-out infinite; }
+.rain-a { animation: rain 1.35s linear infinite; }
+.rain-b { animation: rain 1.35s linear infinite; animation-delay: -0.67s; }
+.leaf-1 { transform-origin: 50% 100%; transform-box: fill-box; animation: leaf 5s ease-in-out infinite; }
+.leaf-2 { transform-origin: 50% 100%; transform-box: fill-box; animation: leaf 6s ease-in-out infinite reverse; }
+.cursor { animation: glow 1s steps(1, end) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hands, .arm-wave, .hana-free-root, .hana-idle-root, .eyes,
+  .screen-glow, .rain-a, .rain-b, .leaf-1, .leaf-2, .cursor,
+  .question, .zzz span, .notes span {
+    animation: none !important;
+  }
+}
+
+.bed-slept {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.stage[data-state="idle"] .bed-slept {
+  opacity: 1;
+  visibility: visible;
+}
+
+.stage[data-state="idle"] .bed-made {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.bed-made {
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+

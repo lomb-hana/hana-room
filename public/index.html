@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A little room where you can see what Hana is up to.">
+  <meta name="theme-color" content="#16121f">
+  <title>Hana's Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Hana's Room</h1>
+      <div class="chip"><span class="dot" aria-hidden="true"></span><span id="state-label">On a break</span></div>
+    </header>
+    <div class="frame">
+      <div class="stage" data-state="free-time">
+        <svg viewBox="0 0 960 600" role="img" aria-labelledby="roomTitle roomDesc">
+          <title id="roomTitle">Hana's cozy room</title>
+          <desc id="roomDesc">A tidy room with a window, plant, couch, desk, and bed. Hana moves around it depending on what she is doing.</desc>
+          <defs>
+            <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f8eedf"/>
+              <stop offset="100%" stop-color="#f0dfc6"/>
+            </linearGradient>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#445887"/>
+              <stop offset="46%" stop-color="#7b8db5"/>
+              <stop offset="100%" stop-color="#f3c7a3"/>
+            </linearGradient>
+            <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#d2b089"/>
+              <stop offset="100%" stop-color="#c19a6c"/>
+            </linearGradient>
+            <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#9a6744"/>
+              <stop offset="100%" stop-color="#7a4d33"/>
+            </linearGradient>
+            <linearGradient id="sage" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#8a9c86"/>
+              <stop offset="100%" stop-color="#6c7d69"/>
+            </linearGradient>
+            <linearGradient id="blanket" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#d9cce6"/>
+              <stop offset="100%" stop-color="#b9a7cc"/>
+            </linearGradient>
+            <radialGradient id="lampglow" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stop-color="#ffd88a" stop-opacity="0.55"/>
+              <stop offset="60%" stop-color="#ffd88a" stop-opacity="0.12"/>
+              <stop offset="100%" stop-color="#ffd88a" stop-opacity="0"/>
+            </radialGradient>
+            <clipPath id="window-clip">
+              <rect x="70" y="86" width="184" height="220" rx="2"/>
+            </clipPath>
+            <clipPath id="bed-clip">
+              <rect x="722" y="332" width="190" height="86" rx="10"/>
+            </clipPath>
+          </defs>
+
+          <!-- wall + floor -->
+          <rect width="960" height="440" fill="url(#wall)"/>
+          <rect y="430" width="960" height="170" fill="url(#floor)"/>
+          <g stroke="#b08960" stroke-width="2" opacity="0.35">
+            <line x1="0" y1="458" x2="960" y2="458"/>
+            <line x1="0" y1="488" x2="960" y2="488"/>
+            <line x1="0" y1="518" x2="960" y2="518"/>
+            <line x1="0" y1="548" x2="960" y2="548"/>
+            <line x1="0" y1="578" x2="960" y2="578"/>
+          </g>
+          <rect y="422" width="960" height="10" fill="#e0c8a8"/>
+          <rect y="420" width="960" height="3" fill="#edd8bd"/>
+
+          <!-- window -->
+          <rect x="50" y="66" width="224" height="266" rx="10" fill="url(#wood)"/>
+          <g clip-path="url(#window-clip)">
+            <rect x="70" y="86" width="184" height="220" fill="url(#sky)"/>
+            <circle cx="210" y="132" r="22" fill="#f7ead0"/>
+            <circle cx="218" y="126" r="16" fill="#8a97b8" opacity="0.18"/>
+            <ellipse cx="110" y="168" rx="36" ry="12" fill="#efe6dc" opacity="0.28"/>
+            <ellipse cx="148" y="180" rx="28" ry="10" fill="#efe6dc" opacity="0.2"/>
+            <g class="rain-a" stroke="#e8f0ff" stroke-width="1.4" stroke-linecap="round" opacity="0.55">
+              <line x1="86" y1="70" x2="78" y2="110"/>
+              <line x1="112" y1="90" x2="104" y2="130"/>
+              <line x1="140" y1="60" x2="132" y2="100"/>
+              <line x1="168" y1="100" x2="160" y2="140"/>
+              <line x1="196" y1="80" x2="188" y2="120"/>
+              <line x1="226" y1="70" x2="218" y2="110"/>
+              <line x1="98" y1="150" x2="90" y2="190"/>
+              <line x1="128" y1="170" x2="120" y2="210"/>
+              <line x1="158" y1="140" x2="150" y2="180"/>
+              <line x1="188" y1="160" x2="180" y2="200"/>
+              <line x1="218" y1="150" x2="210" y2="190"/>
+            </g>
+            <g class="rain-b" stroke="#e8f0ff" stroke-width="1.4" stroke-linecap="round" opacity="0.4">
+              <line x1="96" y1="40" x2="88" y2="80"/>
+              <line x1="124" y1="20" x2="116" y2="60"/>
+              <line x1="154" y1="50" x2="146" y2="90"/>
+              <line x1="184" y1="30" x2="176" y2="70"/>
+              <line x1="214" y1="45" x2="206" y2="85"/>
+            </g>
+          </g>
+          <path d="M70 196h184" stroke="#8a5a3c" stroke-width="8"/>
+          <path d="M162 86v220" stroke="#8a5a3c" stroke-width="8"/>
+          <rect x="66" y="82" width="192" height="228" fill="none" stroke="#c08960" stroke-width="3" rx="3"/>
+          <rect x="42" y="328" width="240" height="16" rx="3" fill="url(#wood)"/>
+          <rect x="48" y="344" width="16" height="18" fill="#7a4d33"/>
+          <rect x="260" y="344" width="16" height="18" fill="#7a4d33"/>
+
+          <!-- plant -->
+          <g transform="translate(78, 368)">
+            <path d="M16 38 L24 86 H72 L80 38 Z" fill="#c2754e"/>
+            <rect x="12" y="28" width="72" height="12" rx="3" fill="#a35c3c"/>
+            <g class="leaf-1">
+              <path d="M48 30 C 18 -8, -10 20, 24 36 C 10 10, 36 4, 48 30Z" fill="#3f7a52"/>
+            </g>
+            <g class="leaf-2">
+              <path d="M50 28 C 86 -10, 108 24, 70 38 C 92 12, 64 2, 50 28Z" fill="#4f9264"/>
+            </g>
+            <path d="M48 30 C 32 -24, 78 -28, 52 26Z" fill="#2f6a45"/>
+            <path d="M50 30 C 70 -18, 96 -6, 58 28Z" fill="#5aa371"/>
+          </g>
+
+          <!-- bed (back right), sitting on the floor -->
+          <g transform="translate(20, 40)">
+            <rect x="724" y="262" width="192" height="86" rx="18" fill="url(#wood)"/>
+            <rect x="736" y="274" width="168" height="62" rx="12" fill="#6d4530"/>
+            <rect x="732" y="428" width="12" height="40" rx="2" fill="#5a4030"/>
+            <rect x="896" y="428" width="12" height="40" rx="2" fill="#5a4030"/>
+            <rect x="720" y="348" width="200" height="86" rx="10" fill="#8a5a3c"/>
+            <rect x="728" y="336" width="184" height="78" rx="12" fill="#f4ece3"/>
+
+            <g class="bed-made">
+              <ellipse cx="776" cy="362" rx="30" ry="16" fill="#fff8f0"/>
+              <ellipse cx="836" cy="362" rx="28" ry="15" fill="#fff4ea"/>
+              <path d="M 732,382 C 760,372 900,372 908,384 C 912,406 910,414 896,416 C 840,424 760,424 736,414 C 724,406 724,390 732,382Z" fill="url(#blanket)"/>
+              <path d="M 748,390 C 800,382 860,384 896,392" stroke="#f4eef8" stroke-width="3" fill="none" opacity="0.55"/>
+            </g>
+
+            <g class="bed-slept">
+              <g class="hana hana-idle" transform="translate(778, 376)">
+                <g class="hana-idle-root">
+                  <ellipse cx="-8" cy="-16" rx="26" ry="22" fill="#2a211c"/>
+                  <rect x="8" y="0" width="62" height="22" rx="10" fill="#f3efe8"/>
+                  <circle cx="0" cy="0" r="21" fill="#e6be9a"/>
+                  <ellipse cx="0" cy="-14" rx="22" ry="13" fill="#2a211c"/>
+                  <path d="M -16,-10 Q -10,-6 -2,-12" fill="#2a211c"/>
+                  <path d="M 2,-12 Q 10,-6 16,-10" fill="#2a211c"/>
+                  <path d="M -20,-8 Q -30,8 -14,16" stroke="#2a211c" stroke-width="9" fill="none" stroke-linecap="round"/>
+                  <path d="M 20,-8 Q 30,6 16,14" stroke="#2a211c" stroke-width="9" fill="none" stroke-linecap="round"/>
+                  <rect x="-14" y="-24" width="10" height="6" rx="2" fill="#f0c14a" transform="rotate(-18 -9 -21)"/>
+                  <ellipse cx="-11" cy="6" rx="4.2" ry="2.4" fill="#e8b4a2" opacity="0.8"/>
+                  <ellipse cx="11" cy="6" rx="4.2" ry="2.4" fill="#e8b4a2" opacity="0.8"/>
+                  <path d="M -10,0 Q -6,2.6 -2,0" stroke="#2a211c" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+                  <path d="M 2,0 Q 6,2.6 10,0" stroke="#2a211c" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+                  <path d="M -4,9 Q 0,11 4,9" stroke="#b67b68" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+                </g>
+              </g>
+              <path d="M 796,358 C 824,350 904,352 916,364 C 920,390 918,420 900,422 C 834,430 804,424 792,408 C 782,396 790,360 796,358Z" fill="url(#blanket)"/>
+              <path d="M 802,372 C 840,366 880,370 904,380" stroke="#f4eef8" stroke-width="3" fill="none" opacity="0.5"/>
+            </g>
+          </g>
+
+          <!-- couch -->
+          <g transform="translate(250, 318)">
+            <rect x="18" y="118" width="12" height="22" rx="3" fill="#5a4030"/>
+            <rect x="200" y="118" width="12" height="22" rx="3" fill="#5a4030"/>
+            <rect x="8" y="40" width="220" height="86" rx="18" fill="url(#sage)"/>
+            <rect x="0" y="8" width="28" height="112" rx="14" fill="#61725e"/>
+            <rect x="208" y="8" width="28" height="112" rx="14" fill="#61725e"/>
+            <rect x="22" y="0" width="192" height="70" rx="16" fill="#7d8f78"/>
+            <rect x="30" y="52" width="86" height="48" rx="12" fill="#8fa08b"/>
+            <rect x="120" y="52" width="86" height="48" rx="12" fill="#8fa08b"/>
+          </g>
+
+          <!-- Hana on the couch -->
+          <g class="hana hana-free" transform="translate(368, 392)">
+            <g class="hana-free-root">
+              <ellipse cx="4" cy="48" rx="40" ry="8" fill="#3a2a1c" opacity="0.12"/>
+              <rect x="-2" y="10" width="66" height="16" rx="8" fill="#4a5a6a"/>
+              <rect x="52" y="12" width="22" height="14" rx="6" fill="#3d322c"/>
+              <g transform="rotate(-14)">
+                <rect x="-22" y="-62" width="42" height="74" rx="16" fill="#f3efe8"/>
+                <rect x="-36" y="-38" width="14" height="46" rx="7" fill="#f3efe8"/>
+                <rect x="-35" y="2" width="12" height="16" rx="6" fill="#e6be9a"/>
+                <rect x="16" y="-26" width="36" height="12" rx="6" fill="#f3efe8"/>
+                <rect x="46" y="-27" width="14" height="12" rx="6" fill="#e6be9a"/>
+                <rect x="-8" y="-72" width="14" height="16" rx="4" fill="#e6be9a"/>
+                <!-- hair back, then face, then bangs above the eyes -->
+                <ellipse cx="-1" cy="-94" rx="25" ry="28" fill="#2a211c"/>
+                <circle cx="-1" cy="-88" r="22" fill="#e6be9a"/>
+                <ellipse cx="-1" cy="-104" rx="23" ry="13" fill="#2a211c"/>
+                <path d="M -16,-98 Q -9,-95 -3,-99" fill="#2a211c"/>
+                <path d="M 2,-99 Q 8,-95 15,-98" fill="#2a211c"/>
+                <path d="M -22,-92 Q -30,-78 -16,-66" stroke="#2a211c" stroke-width="9" fill="none" stroke-linecap="round"/>
+                <path d="M 20,-92 Q 28,-78 16,-66" stroke="#2a211c" stroke-width="9" fill="none" stroke-linecap="round"/>
+                <rect x="-16" y="-114" width="10" height="6" rx="2" fill="#f0c14a" transform="rotate(-28 -11 -111)"/>
+                <!-- headphones on top of hair -->
+                <path d="M -22,-98 Q -1,-126 20,-98" stroke="#2b2a32" stroke-width="6" fill="none" stroke-linecap="round"/>
+                <rect x="-30" y="-100" width="12" height="22" rx="6" fill="#2b2a32"/>
+                <rect x="18" y="-100" width="12" height="22" rx="6" fill="#2b2a32"/>
+                <rect x="-27" y="-94" width="6" height="10" rx="2" fill="#d7a04a"/>
+                <rect x="21" y="-94" width="6" height="10" rx="2" fill="#d7a04a"/>
+                <ellipse cx="-12" cy="-82" rx="4.5" ry="2.6" fill="#e8b4a2" opacity="0.7"/>
+                <ellipse cx="10" cy="-82" rx="4.5" ry="2.6" fill="#e8b4a2" opacity="0.7"/>
+                <g class="eyes">
+                  <ellipse cx="-8" cy="-88" rx="3" ry="3.8" fill="#2a211c"/>
+                  <ellipse cx="6" cy="-88" rx="3" ry="3.8" fill="#2a211c"/>
+                  <circle cx="-7" cy="-89.4" r="0.9" fill="#fff"/>
+                  <circle cx="7" cy="-89.4" r="0.9" fill="#fff"/>
+                </g>
+                <path d="M -12,-98 Q -8,-100 -5,-98" stroke="#2a211c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                <path d="M 3,-98 Q 6,-100 10,-98" stroke="#2a211c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                <path d="M -5,-78 Q -1,-74 3,-78" stroke="#b67b68" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+              </g>
+            </g>
+          </g>
+
+          <!-- rug -->
+          <ellipse cx="430" cy="522" rx="220" ry="44" fill="#c17a62" opacity="0.62"/>
+          <ellipse cx="430" cy="522" rx="176" ry="30" fill="#d89a82" opacity="0.28"/>
+
+          <!-- waiting Hana, standing on the rug -->
+          <g class="hana hana-waiting" transform="translate(430, 516)">
+            <ellipse cx="0" cy="-4" rx="34" ry="8" fill="#3a2a1c" opacity="0.22"/>
+            <ellipse cx="0" cy="-148" rx="30" ry="36" fill="#2a211c"/>
+            <path d="M -28,-140 C -34,-118 -28,-98 -18,-96 L 18,-96 C 28,-98 34,-118 28,-140" fill="#2a211c"/>
+            <rect x="-18" y="-70" width="15" height="58" rx="6" fill="#4a5a6a"/>
+            <rect x="3" y="-70" width="15" height="58" rx="6" fill="#4a5a6a"/>
+            <rect x="-20" y="-16" width="18" height="12" rx="4" fill="#3d322c"/>
+            <rect x="2" y="-16" width="18" height="12" rx="4" fill="#3d322c"/>
+            <rect x="-22" y="-128" width="44" height="66" rx="14" fill="#f3efe8"/>
+            <rect x="-40" y="-116" width="14" height="44" rx="7" fill="#f3efe8"/>
+            <rect x="-39" y="-78" width="12" height="20" rx="6" fill="#e6be9a"/>
+            <g transform="translate(18, -118)">
+              <g class="arm-wave">
+                <rect x="0" y="-6" width="42" height="13" rx="7" fill="#f3efe8"/>
+                <rect x="34" y="-8" width="16" height="17" rx="8" fill="#e6be9a"/>
+              </g>
+            </g>
+            <rect x="-7" y="-136" width="14" height="14" rx="4" fill="#e6be9a"/>
+            <circle cx="0" cy="-154" r="26" fill="#e6be9a"/>
+            <ellipse cx="0" cy="-172" rx="25" ry="14" fill="#2a211c"/>
+            <path d="M -16,-166 Q -9,-161 -2,-167" fill="#2a211c"/>
+            <path d="M 2,-167 Q 9,-161 16,-166" fill="#2a211c"/>
+            <path d="M -24,-160 Q -33,-140 -20,-124" stroke="#2a211c" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <path d="M 24,-160 Q 33,-140 22,-124" stroke="#2a211c" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <rect x="-18" y="-180" width="11" height="7" rx="2" fill="#f0c14a" transform="rotate(-24 -12 -176)"/>
+            <ellipse cx="-14" cy="-148" rx="5" ry="3" fill="#e8b4a2" opacity="0.7"/>
+            <ellipse cx="14" cy="-148" rx="5" ry="3" fill="#e8b4a2" opacity="0.7"/>
+            <g class="eyes">
+              <ellipse cx="-8" cy="-154" rx="3.2" ry="4.2" fill="#2a211c"/>
+              <ellipse cx="8" cy="-154" rx="3.2" ry="4.2" fill="#2a211c"/>
+              <circle cx="-7" cy="-155.5" r="1" fill="#fff"/>
+              <circle cx="9" cy="-155.5" r="1" fill="#fff"/>
+            </g>
+            <path d="M -13,-164 Q -8,-167 -4,-164" stroke="#2a211c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M 4,-164 Q 8,-167 13,-164" stroke="#2a211c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M -6,-144 Q 0,-140 6,-144" stroke="#b67b68" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          </g>
+
+          <!-- chair -->
+          <g transform="translate(548, 400)">
+            <rect x="10" y="52" width="8" height="40" rx="2" fill="#5a4030"/>
+            <rect x="68" y="52" width="8" height="40" rx="2" fill="#5a4030"/>
+            <rect x="2" y="30" width="84" height="26" rx="8" fill="url(#wood)"/>
+            <rect x="8" y="-18" width="70" height="52" rx="10" fill="#8a5a3c"/>
+          </g>
+
+          <!-- working Hana at the desk, in the chair -->
+          <g class="hana hana-working" transform="translate(568, 456)">
+            <ellipse cx="6" cy="8" rx="36" ry="8" fill="#3a2a1c" opacity="0.18"/>
+            <rect x="-18" y="-36" width="14" height="36" rx="6" fill="#4a5a6a"/>
+            <rect x="6" y="-36" width="14" height="36" rx="6" fill="#4a5a6a"/>
+            <rect x="-20" y="-6" width="18" height="11" rx="4" fill="#3d322c"/>
+            <rect x="4" y="-6" width="18" height="11" rx="4" fill="#3d322c"/>
+            <rect x="-20" y="-52" width="48" height="18" rx="8" fill="#4a5a6a"/>
+            <g transform="rotate(6)">
+              <rect x="-22" y="-116" width="40" height="70" rx="14" fill="#f3efe8"/>
+              <rect x="-9" y="-124" width="14" height="14" rx="4" fill="#e6be9a"/>
+              <ellipse cx="-2" cy="-144" rx="26" ry="30" fill="#2a211c"/>
+              <circle cx="-2" cy="-140" r="23" fill="#e6be9a"/>
+              <ellipse cx="-2" cy="-156" rx="22" ry="13" fill="#2a211c"/>
+              <path d="M -16,-150 Q -9,-145 -3,-151" fill="#2a211c"/>
+              <path d="M 1,-151 Q 8,-145 14,-150" fill="#2a211c"/>
+              <path d="M -22,-146 Q -30,-130 -16,-118" stroke="#2a211c" stroke-width="9" fill="none" stroke-linecap="round"/>
+              <path d="M 18,-146 Q 26,-130 16,-118" stroke="#2a211c" stroke-width="9" fill="none" stroke-linecap="round"/>
+              <rect x="-18" y="-166" width="10" height="6" rx="2" fill="#f0c14a" transform="rotate(-24 -13 -163)"/>
+              <ellipse cx="-13" cy="-134" rx="4.5" ry="2.6" fill="#e8b4a2" opacity="0.7"/>
+              <ellipse cx="9" cy="-134" rx="4.5" ry="2.6" fill="#e8b4a2" opacity="0.7"/>
+              <g class="eyes">
+                <ellipse cx="-9" cy="-140" rx="3" ry="3.8" fill="#2a211c"/>
+                <ellipse cx="5" cy="-140" rx="3" ry="3.8" fill="#2a211c"/>
+                <circle cx="-8" cy="-141.3" r="0.9" fill="#fff"/>
+                <circle cx="6" cy="-141.3" r="0.9" fill="#fff"/>
+              </g>
+              <path d="M -13,-150 Q -9,-152 -5,-150" stroke="#2a211c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+              <path d="M 2,-150 Q 6,-152 10,-150" stroke="#2a211c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+              <path d="M -6,-130 Q -1,-127 4,-130" stroke="#b67b68" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            </g>
+          </g>
+
+          <!-- desk + lamp + laptop (in front of legs) -->
+          <g transform="translate(500, 390)">
+            <rect x="12" y="56" width="10" height="70" rx="2" fill="#5a4030"/>
+            <rect x="198" y="56" width="10" height="70" rx="2" fill="#5a4030"/>
+            <rect x="0" y="42" width="220" height="16" rx="4" fill="url(#wood)"/>
+            <rect x="0" y="42" width="220" height="5" rx="3" fill="#b07a52"/>
+            <rect x="18" y="26" width="16" height="16" rx="3" fill="#c17a62"/>
+            <path d="M 34 30 H 40 V 38 H 34" fill="none" stroke="#c17a62" stroke-width="2.5"/>
+            <rect x="186" y="8" width="6" height="36" fill="#5a4030"/>
+            <path d="M 176 10 L 202 10 L 196 28 L 182 28 Z" fill="#d7a04a"/>
+            <circle cx="189" cy="8" r="5" fill="#5a4030"/>
+          </g>
+          <ellipse cx="690" cy="300" rx="120" ry="90" fill="url(#lampglow)"/>
+
+          <!-- laptop, a little to the right so her face stays visible -->
+          <g transform="translate(590, 378)">
+            <rect x="0" y="-40" width="86" height="52" rx="4" fill="#3a3a46"/>
+            <rect x="6" y="-34" width="74" height="40" rx="2" fill="#9fd6e6" class="screen-glow"/>
+            <rect x="16" y="-24" width="42" height="3" rx="1" fill="#eff9fc" opacity="0.8"/>
+            <rect x="16" y="-16" width="30" height="3" rx="1" fill="#eff9fc" opacity="0.55"/>
+            <rect x="16" y="-8" width="8" height="8" fill="#eff9fc" opacity="0.9" class="cursor"/>
+            <rect x="-6" y="12" width="98" height="8" rx="2" fill="#2f2f38"/>
+          </g>
+
+          <!-- typing hands in front of the laptop -->
+          <g class="hana hana-working" transform="translate(568, 456)">
+            <g class="hands">
+              <rect x="16" y="-72" width="16" height="36" rx="8" fill="#f3efe8"/>
+              <rect x="44" y="-72" width="16" height="36" rx="8" fill="#f3efe8"/>
+              <ellipse cx="24" cy="-38" rx="8" ry="6" fill="#e6be9a"/>
+              <ellipse cx="52" cy="-38" rx="8" ry="6" fill="#e6be9a"/>
+            </g>
+          </g>
+        </svg>
+        <div class="overlay bubble"><span id="status-text">Testing my new room</span></div>
+        <div class="overlay question" aria-hidden="true">?</div>
+        <div class="overlay zzz" aria-hidden="true"><span>z</span><span>z</span><span>z</span></div>
+        <div class="overlay notes" aria-hidden="true"><span>♪</span><span>♫</span></div>
+      </div>
+    </div>
+    <p class="updated" id="updated">Last updated just now</p>
+    <p class="hint">A tiny test room for Hana</p>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
