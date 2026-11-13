@@ -2,3 +2,9 @@
 *.pyc
 __pycache__/
 .venv/
+node_modules/
+dist/
+data/
+.env
+.env.*
+.hana-room-secret

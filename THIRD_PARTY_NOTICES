@@ -1,0 +1,32 @@
+Hana's Room is based on grokhouse
+(https://github.com/remorses/grokhouse), MIT licensed.
+
+  Copyright (c) 2026 Tommaso De Rossi
+
+The license text is in LICENSE and LICENSE.grokhouse.
+
+This project copies grokhouse's isometric engine, art, kinds, actors,
+viewer, HUD, sounds, and styles. Sign-in, token, GrokBotService, and
+Cloudflare Worker parts of grokhouse were not used. Status and chat
+in this project come from /api/status, /api/chat, and /api/reply.
+
+Copied or adapted files include:
+
+  src/engine/*
+  src/scene/*
+  src/ui/hud.ts
+  src/layout.ts
+  src/state.ts
+  src/sound.ts
+  src/styles.css
+  src/types.ts
+  src/protocol.ts (types only, from grokhouse's worker/protocol.ts)
+  public/kinds.json
+  public/paper.svg
+  public/favicon.svg
+  public/sounds/*
+
+Sound effects are CC0, from Freesound via Openverse.
+See public/sounds/CREDITS.md.
+
+grokhouse is a fan project and is not affiliated with xAI, Grok, or Cursor.
