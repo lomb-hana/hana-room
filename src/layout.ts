@@ -247,6 +247,24 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
   const R = streamOf('room', bot.id)
   const theme = themeOf(snapshot)
   const def = themeDef(theme, R)
+  const future = bot.id === 'hana'
+  if (future) {
+    def.walls = { ink: 'blue', tone: 0.1, style: 'plain', ink2: 'teal', tone2: 0.05 }
+    def.floor = { style: 'grid', ink: 'blue', tone: 0.2, ink2: 'teal', tone2: 0.06 }
+    def.rug = 'charcoal'
+    def.things = [
+      { kind: 'desk', at: { i: 5.4, j: 0, face: 'ne' }, colors: { top: 'charcoal', legs: 'black', drawers: 'black' } },
+      { kind: 'monitor', at: { i: 5.85, j: 0.12, z: 0.86, face: 'ne' }, colors: { body: 'black', screen: 'teal' } },
+      { kind: 'chair', at: { i: 6.05, j: 1.15, face: 'sw' }, colors: { wood: 'black', seat: 'charcoal' } },
+      { kind: 'sofa', at: { i: 0, j: 2.55, face: 'nw' }, colors: { body: 'charcoal', cushion: 'teal', legs: 'black' } },
+      { kind: 'coffee-table', at: { i: 1.55, j: 3.15, face: 'nw' }, colors: { top: 'charcoal', legs: 'black' } },
+      { kind: 'snake-plant', at: { i: 0.15, j: 0.15, face: 'ne' }, colors: { pot: 'charcoal', leaf: 'teal' } },
+    ]
+    def.work = [
+      { i: 6.15, j: 1.55, face: 'ne', act: 'type' },
+      { i: 6.55, j: 1.55, face: 'ne', act: 'type' },
+    ]
+  }
   const room: Room = {
     id: bot.id,
     type: theme,
@@ -254,32 +272,43 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     at,
     w: ROOM,
     d: ROOM,
+    look: future ? 'future' : undefined,
     walls: def.walls,
     floor: def.floor,
-    windows: [{ side: 'nw', pos: 7.4, w: 1.6, h: 1.2, z: 1.0 }],
-    bulb: { side: 'ne', pos: 7.6 },
+    windows: future
+      ? [{ side: 'nw', pos: 6.15, w: 2.4, h: 1.45, z: 0.95 }]
+      : [{ side: 'nw', pos: 7.4, w: 1.6, h: 1.2, z: 1.0 }],
+    bulb: future ? undefined : { side: 'ne', pos: 7.6 },
   }
-  const puts: Put[] = [
-    { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: def.rug, pattern: 'cream' } },
-    ...def.things,
-    { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: pk(R, ['terracotta', 'teal', 'mustard', 'plum', 'coral']), blanket: pk(R, ['sky', 'pink', 'mint', 'yellow']) } },
-  ]
+  const puts: Put[] = future
+    ? [
+        { kind: 'rug', at: { i: 2.7, j: 2.7, face: 'ne' }, colors: { rug: 'charcoal', pattern: 'teal' } },
+        ...def.things,
+        { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: 'charcoal', cushion: 'black', pillow: 'silver', blanket: 'teal' } },
+      ]
+    : [
+        { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: def.rug, pattern: 'cream' } },
+        ...def.things,
+        { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: pk(R, ['terracotta', 'teal', 'mustard', 'plum', 'coral']), blanket: pk(R, ['sky', 'pink', 'mint', 'yellow']) } },
+      ]
 
-  // The wall clock points at the next scheduled run; the calendar says "this bot has a schedule".
-  const next = snapshot.automations.filter((a) => a.enabled && a.nextRunAt).sort((a, b) => a.nextRunAt! - b.nextRunAt!)[0]
-  const when = next?.nextRunAt ? new Date(next.nextRunAt) : null
-  puts.push({ kind: 'clock', at: { i: 0, j: 1.1, z: 1.75, face: 'nw' }, options: when ? { hour: when.getHours(), minute: when.getMinutes() } : {} })
-  if (snapshot.automations.length) puts.push({ kind: 'calendar', at: { i: 0, j: 2.2, z: 1.3, face: 'nw' } })
-  if (snapshot.automations.length) puts.push(on('alarm-clock', { i: 6.9, j: 5.75, z: 0, face: 'ne' }))
+  if (!future) {
+    // The wall clock points at the next scheduled run; the calendar says "this bot has a schedule".
+    const next = snapshot.automations.filter((a) => a.enabled && a.nextRunAt).sort((a, b) => a.nextRunAt! - b.nextRunAt!)[0]
+    const when = next?.nextRunAt ? new Date(next.nextRunAt) : null
+    puts.push({ kind: 'clock', at: { i: 0, j: 1.1, z: 1.75, face: 'nw' }, options: when ? { hour: when.getHours(), minute: when.getMinutes() } : {} })
+    if (snapshot.automations.length) puts.push({ kind: 'calendar', at: { i: 0, j: 2.2, z: 1.3, face: 'nw' } })
+    if (snapshot.automations.length) puts.push(on('alarm-clock', { i: 6.9, j: 5.75, z: 0, face: 'ne' }))
 
-  // The todo list: one sticky note per item on a corkboard.
-  const board = { i: 6.4, z: 1.15 }
-  puts.push({ kind: 'corkboard', at: { i: board.i, j: 0, z: board.z, face: 'ne' } })
-  snapshot.todos.slice(-MAX_NOTES).forEach((todo, n) => {
-    const col = n % 4
-    const row = Math.floor(n / 4)
-    puts.push({ kind: 'sticky-note', at: { i: board.i + 0.14 + col * 0.37, j: 0, z: board.z + 0.6 - row * 0.42, face: 'ne' }, colors: { note: NOTE_COLORS[todo.status] } })
-  })
+    // The todo list: one sticky note per item on a corkboard.
+    const board = { i: 6.4, z: 1.15 }
+    puts.push({ kind: 'corkboard', at: { i: board.i, j: 0, z: board.z, face: 'ne' } })
+    snapshot.todos.slice(-MAX_NOTES).forEach((todo, n) => {
+      const col = n % 4
+      const row = Math.floor(n / 4)
+      puts.push({ kind: 'sticky-note', at: { i: board.i + 0.14 + col * 0.37, j: 0, z: board.z + 0.6 - row * 0.42, face: 'ne' }, colors: { note: NOTE_COLORS[todo.status] } })
+    })
+  }
 
   const items: Item[] = puts.map((put, n) => ({ id: `${bot.id}:${n}`, kind: put.kind, name: put.kind, room: bot.id, at: put.at, colors: put.colors, options: put.options }))
   for (const item of items) {

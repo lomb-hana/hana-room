@@ -27,6 +27,7 @@ import type { Color, Item, Room, Side, Walls } from '../types.ts'
 export const ROOM = 9 // tiles per side
 export const PITCH = 13 // each bot's room is its own box, with a walkway round it
 export const WALL_H = 2.6 // a back wall's height in z
+const isFuture = (rm: Room) => rm.look === 'future'
 export const LOW_H = 0.85 // a wall between two spaces
 export const GAP = [3.55, 5.45] // the doorway in every wall between two spaces
 
@@ -78,6 +79,11 @@ export function slab(H: Hand, R: Rng, rm: Room, E: Edges = EDGES) {
   const top = H.tile(0, 0, w, d, 0)
   const se = H.faceJ(w, 0, d, -th, 0)
   const sw = H.faceI(0, d, w, -th, 0)
+  if (isFuture(rm)) {
+    if (E.se === 'cut') H.flat(se, '#070a10')
+    if (E.sw === 'cut') H.flat(sw, '#05070b')
+    return top
+  }
   if (E.se === 'cut') {
     H.fill(se, 'blue', 0.62)
     H.line(R, [se[0], se[1], se[2]], 'blue', 1, { tone: 0.85, amp: 0.25 })
@@ -96,6 +102,39 @@ export function floorOf(H: Hand, R: Rng, rm: Room, f: Room['floor'] = {}) {
   const d = rm.d
   const P = H.tile(0, 0, w, d, 0)
   const style = f?.style || 'planks'
+  if (style === 'grid' || isFuture(rm)) {
+    H.flat(P, '#0b1017')
+    H.clip(P, () => {
+      const c = H.ctx()
+      c.save()
+      c.lineWidth = 0.9
+      c.strokeStyle = 'rgba(143, 224, 221, 0.16)'
+      const step = 0.75
+      const stroke = (a: [number, number], b: [number, number]) => {
+        c.beginPath()
+        c.moveTo(a[0], a[1])
+        c.lineTo(b[0], b[1])
+        c.stroke()
+      }
+      for (let i = 0; i <= w + 0.01; i += step) stroke(H.p(i, 0, 0), H.p(i, d, 0))
+      for (let j = 0; j <= d + 0.01; j += step) stroke(H.p(0, j, 0), H.p(w, j, 0))
+      c.strokeStyle = 'rgba(215, 181, 122, 0.14)'
+      for (let i = 0; i <= w + 0.01; i += step * 4) stroke(H.p(i, 0, 0), H.p(i, d, 0))
+      for (let j = 0; j <= d + 0.01; j += step * 4) stroke(H.p(0, j, 0), H.p(w, j, 0))
+      c.restore()
+    })
+    const oc = H.ctx()
+    oc.save()
+    oc.strokeStyle = 'rgba(143, 224, 221, 0.28)'
+    oc.lineWidth = 1.2
+    oc.beginPath()
+    oc.moveTo(P[0][0], P[0][1])
+    for (const q of P.slice(1)) oc.lineTo(q[0], q[1])
+    oc.closePath()
+    oc.stroke()
+    oc.restore()
+    return P
+  }
   const ink = f?.ink || 'sun'
   const tone = f?.tone ?? 0.3
   H.fill(P, ink, tone)
@@ -139,6 +178,13 @@ export function floorOf(H: Hand, R: Rng, rm: Room, f: Room['floor'] = {}) {
         const [x, y] = H.p(i, j, 0)
         H.line(R, [[x - 2, y + 1], [x - 0.5, y - 4], [x + 1, y + 1]], 'teal', 0.8, { tone: 0.8, amp: 0.1 })
       }
+    } else if (style === 'grid') {
+      const step = 0.75
+      for (let i = 0; i <= w + 0.01; i += step) H.line(R, [H.p(i, 0, 0), H.p(i, d, 0)], 'teal', 0.55, { tone: 0.28, amp: 0.02 })
+      for (let j = 0; j <= d + 0.01; j += step) H.line(R, [H.p(0, j, 0), H.p(w, j, 0)], 'teal', 0.55, { tone: 0.28, amp: 0.02 })
+      // A quieter gold every few cells, like a service grid.
+      for (let i = 0; i <= w + 0.01; i += step * 4) H.line(R, [H.p(i, 0, 0), H.p(i, d, 0)], 'sun', 0.7, { tone: 0.22, amp: 0.02 })
+      for (let j = 0; j <= d + 0.01; j += step * 4) H.line(R, [H.p(0, j, 0), H.p(w, j, 0)], 'sun', 0.7, { tone: 0.22, amp: 0.02 })
     }
   })
   H.outline(R, P, 'blue', 1, { tone: 0.85, amp: 0.3 })
@@ -165,6 +211,12 @@ export function backWalls(H: Hand, R: Rng, rm: Room, o: Walls = {}, sides: Side[
   ]
   const out = faces.filter((f) => sides.includes(f[0]))
   for (const [side, F, len, shade] of out) {
+    if (isFuture(rm)) {
+      H.flat(F, side === 'ne' ? '#121821' : '#161c26')
+      H.tint(F, 'teal', 0.08)
+      H.tint(F, 'blue', shade)
+      continue
+    }
     H.fill(F, ink, tone)
     if (o.ink2) H.tint(F, o.ink2, o.tone2 ?? 0.15)
     H.clip(F, () => {
@@ -204,23 +256,31 @@ export function wallTrim(H: Hand, R: Rng, rm: Room, o: Walls = {}, sides: Side[]
   const ink = o.ink || 'coral'
   const tone = o.tone ?? 0.22
   const th = 0.14
+  const base = isFuture(rm) ? 'black' : 'paper'
+  const baseTone = isFuture(rm) ? 0.72 : 1
   if (sides.includes('nw')) {
-    H.fill(wallRect(H, 'nw', 0, d, 0, 0.16, 0.01), 'paper', 1)
+    H.fill(wallRect(H, 'nw', 0, d, 0, 0.16, 0.01), base, baseTone)
     H.tint(wallRect(H, 'nw', 0, d, 0, 0.16, 0.01), 'blue', 0.2)
     H.grad([H.p(0, 0, 0), H.p(1.4, 1.4, 0), H.p(1.4, d, 0), H.p(0, d, 0)], 'blue', 0.22, 0, H.p(0, d / 2, 0), H.p(1.2, d / 2, 0), 5)
     const T = [H.p(0, 0, h), H.p(0, d, h), H.p(-th, d, h), H.p(-th, 0, h)]
-    H.fill(T, ink, tone * 0.4)
-    H.outline(R, T, 'blue', 1, { tone: 0.9, amp: 0.2 })
-    H.outline(R, H.faceJ(0, 0, d, 0, h), 'blue', 1.1, { tone: 0.9, amp: 0.25 })
+    if (isFuture(rm)) H.flat(T, '#0d1218')
+    else {
+      H.fill(T, ink, tone * 0.4)
+      H.outline(R, T, 'blue', 1, { tone: 0.9, amp: 0.2 })
+      H.outline(R, H.faceJ(0, 0, d, 0, h), 'blue', 1.1, { tone: 0.9, amp: 0.25 })
+    }
   }
   if (sides.includes('ne')) {
-    H.fill(wallRect(H, 'ne', 0, w, 0, 0.16, 0.01), 'paper', 1)
+    H.fill(wallRect(H, 'ne', 0, w, 0, 0.16, 0.01), base, baseTone)
     H.tint(wallRect(H, 'ne', 0, w, 0, 0.16, 0.01), 'blue', 0.08)
     H.grad([H.p(0, 0, 0), H.p(w, 0, 0), H.p(w, 1.1, 0), H.p(1.1, 1.1, 0)], 'blue', 0.16, 0, H.p(w / 2, 0, 0), H.p(w / 2, 1, 0), 5)
     const T = [H.p(0, 0, h), H.p(w, 0, h), H.p(w, -th, h), H.p(0, -th, h)]
-    H.fill(T, ink, tone * 0.4)
-    H.outline(R, T, 'blue', 1, { tone: 0.9, amp: 0.2 })
-    H.outline(R, H.faceI(0, 0, w, 0, h), 'blue', 1.1, { tone: 0.9, amp: 0.25 })
+    if (isFuture(rm)) H.flat(T, '#0d1218')
+    else {
+      H.fill(T, ink, tone * 0.4)
+      H.outline(R, T, 'blue', 1, { tone: 0.9, amp: 0.2 })
+      H.outline(R, H.faceI(0, 0, w, 0, h), 'blue', 1.1, { tone: 0.9, amp: 0.25 })
+    }
   }
 }
 export function lowWall(H: Hand, R: Rng, rm: Room, side: Side, paint: Walls = {}) {
@@ -409,6 +469,85 @@ export function twinkle(H: Hand, _R: Rng, x: number, y: number, s: number, ink: 
   )
 }
 
+
+export function windowNight(H: Hand, R: Rng, side: Side, pos: number, z: number, w: number, h: number) {
+  const P = wallRect(H, side, pos - w / 2, pos + w / 2, z, z + h, 0.03)
+  H.fill(P, 'blue', 0.95)
+  H.clip(P, () => {
+    const RR = streamOf('night', side, pos)
+    for (let k = 0; k < 20; k++) {
+      const at = wallPt(H, side, pos - w / 2 + rd(RR, 0.12, w - 0.12), z + rd(RR, h * 0.38, h * 0.95), 0.04)
+      twinkle(H, RR, at[0], at[1], rd(RR, 0.55, 1.15), 'paper', rd(RR, 0.35, 0.85))
+    }
+    const moon = wallPt(H, side, pos + w * 0.28, z + h * 0.78, 0.04)
+    const g = ell(moon[0], moon[1], 6.5, 6.5)
+    H.fill(g, 'paper', 0.7)
+    H.tint(g, 'teal', 0.28)
+    H.glow(moon[0], moon[1], 16, 14, 'teal', 0.4)
+    let p = pos - w / 2
+    while (p < pos + w / 2 - 0.06) {
+      const bw = rd(RR, 0.14, 0.32)
+      const bh = rd(RR, 0.28, 0.9)
+      const p1 = Math.min(p + bw, pos + w / 2)
+      H.fill(wallRect(H, side, p, p1, z, z + bh, 0.045), 'black', 0.96)
+      const cols = Math.max(1, Math.floor((p1 - p) / 0.08))
+      const rows = Math.max(1, Math.floor(bh / 0.12))
+      for (let col = 0; col < cols; col++)
+        for (let row = 0; row < rows; row++) {
+          if (RR() > 0.42) continue
+          const wx = p + 0.04 + col * ((p1 - p) / cols)
+          const wz = z + 0.08 + row * (bh / rows)
+          const ink: InkName = RR() > 0.55 ? 'teal' : 'sun'
+          const [x, y] = wallPt(H, side, wx, wz, 0.05)
+          H.dot(x, y, 0.7, ink, rd(RR, 0.45, 0.9))
+        }
+      p = p1 + 0.03
+    }
+  })
+  H.outline(R, P, 'sun', 1.05, { tone: 0.55, amp: 0.04 })
+  const inner = wallRect(H, side, pos - w / 2 + 0.04, pos + w / 2 - 0.04, z + 0.04, z + h - 0.04, 0.035)
+  H.outline(R, inner, 'teal', 0.7, { tone: 0.4, amp: 0.03 })
+  const sill = [
+    wallPt(H, side, pos - w / 2 - 0.08, z, 0.04),
+    wallPt(H, side, pos + w / 2 + 0.08, z, 0.04),
+    wallPt(H, side, pos + w / 2 + 0.08, z, 0.2),
+    wallPt(H, side, pos - w / 2 - 0.08, z, 0.2),
+  ]
+  H.fill(sill, 'black', 0.9)
+  H.outline(R, sill, 'teal', 0.7, { tone: 0.45, amp: 0.04 })
+  return P
+}
+
+export function moonPatch(H: Hand, _R: Rng, _rm: Room, side: Side, pos: number, w: number) {
+  const P =
+    side === 'ne'
+      ? [H.p(pos - w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 1.6, 3.2, 0), H.p(pos - w / 2 + 1.6, 3.2, 0)]
+      : [H.p(0.15, pos - w / 2 + 0.2, 0), H.p(0.15, pos + w / 2 + 0.2, 0), H.p(3.4, pos + w / 2 + 1.2, 0), H.p(3.4, pos - w / 2 + 1.2, 0)]
+  H.tint(P, 'teal', 0.14)
+  return P
+}
+
+export function neonStrip(H: Hand, _R: Rng, rm: Room, side: Side = 'ne') {
+  const len = side === 'ne' ? rm.w : rm.d
+  const z = WALL_H - 0.18
+  const a = wallPt(H, side, 0.7, z, 0.05)
+  const b = wallPt(H, side, len - 0.35, z, 0.05)
+  const c = H.ctx()
+  c.save()
+  c.strokeStyle = 'rgba(143, 224, 221, 0.95)'
+  c.lineWidth = 2
+  c.lineCap = 'round'
+  c.shadowColor = 'rgba(143, 224, 221, 0.8)'
+  c.shadowBlur = 10
+  c.beginPath()
+  c.moveTo(a[0], a[1])
+  c.lineTo(b[0], b[1])
+  c.stroke()
+  c.restore()
+  const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+  H.glow(mid[0], mid[1], 48, 12, 'teal', 0.4)
+}
+
 // ---------------- the room ----------------
 export function drawShell(H: Hand, R: Rng, rm: Room, o: { edges?: Edges; onFloor?: () => void } = {}) {
   const E = o.edges || EDGES
@@ -420,7 +559,10 @@ export function drawShell(H: Hand, R: Rng, rm: Room, o: { edges?: Edges; onFloor
   const wall = rm.walls || {}
   if (full.length) {
     backWalls(H, R, rm, wall, full)
-    for (const win of (rm.windows || []).filter(on)) windowOn(H, R, win.side, win.pos, win.z ?? 1.1, win.w ?? 2, win.h ?? 1.4)
+    for (const win of (rm.windows || []).filter(on)) {
+      const draw = isFuture(rm) ? windowNight : windowOn
+      draw(H, R, win.side, win.pos, win.z ?? 1.1, win.w ?? 2, win.h ?? 1.4)
+    }
     if (on(rm.door)) doorOn(H, R, rm.door!.side, rm.door!.pos)
     for (const ot of (rm.outlets || []).filter(on)) outletOn(H, R, ot.side, ot.pos)
     wallTrim(H, R, rm, wall, full)
@@ -429,9 +571,14 @@ export function drawShell(H: Hand, R: Rng, rm: Room, o: { edges?: Edges; onFloor
     if (E[sd] === 'low') lowWall(H, R, rm, sd, (E.paint && E.paint[sd]) || wall)
     if (E[sd] === 'fence') fence(H, R, rm, sd)
   }
-  for (const win of (rm.windows || []).filter(on)) sunPatch(H, R, rm, win.side, win.pos, win.w ?? 2)
+  for (const win of (rm.windows || []).filter(on)) {
+    const wash = isFuture(rm) ? moonPatch : sunPatch
+    wash(H, R, rm, win.side, win.pos, win.w ?? 2)
+  }
+  if (isFuture(rm) && full.includes('ne')) neonStrip(H, R, rm, 'ne')
 }
 export function drawBulb(H: Hand, R: Rng, rm: Room, lit: boolean, E: Edges = EDGES) {
+  if (isFuture(rm)) return
   if (rm.bulb && E[rm.bulb.side] === 'wall') bulbOn(H, R, rm.bulb.side, rm.bulb.pos, lit)
 }
 

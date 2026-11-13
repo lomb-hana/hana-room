@@ -1,27 +1,58 @@
-/* Grok Bot Office: a hand-drawn look, like an ink drawing on warm cream paper.
-   Typewriter type, thin wobbly ink outlines (the #drawn SVG filter in index.html) and
-   pen-hatched shadows instead of solid ones; wooden signs, paper notes with tape. */
+/* Hana's Room: a dark sci-fi apartment, using Rivencast's palette and Geist type.
+   Gold and teal accents, glass panels, a clean neon-lit iso room. */
+@font-face {
+  font-family: Geist;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/geist-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/geist-mono-latin.woff2') format('woff2');
+}
 :root {
-  --paper: #f4efe3;
-  --paper-2: #faf7ef;
-  --card: #fcfaf4;
-  --note: #f7ecc9;
-  --rose: #f6e1d6;
-  --ink: #2b2622;
-  --ink-soft: #6e655c;
-  --coral: #d97757;
-  --sun: #e8b654;
-  --teal: #6a9a86;
-  --plum: #8c5a8f;
-  --wood: #dcb27a;
-  --wood-dark: #a9794b;
-  --line: 1.4px solid var(--ink);
-  --shadow: none;
-  --drawn: url(#drawn);
-  --pop: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --spring: cubic-bezier(0.22, 1.4, 0.36, 1);
-  --ui: 'Courier Prime', 'Courier New', ui-monospace, monospace;
-  --hand: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+  --bg: #06080c;
+  --bg-2: #0a0d13;
+  --panel: rgba(14, 18, 25, 0.82);
+  --panel-solid: #0e1219;
+  --text: #f3efe6;
+  --text-2: #c9ccd3;
+  --muted: #9aa3b2;
+  --dim: #6b7383;
+  --gold: #d7b57a;
+  --gold-hi: #f6e6c4;
+  --gold-lo: #9a7340;
+  --teal: #8fe0dd;
+  --teal-lo: #4aa8aa;
+  --ok: #7ee2b8;
+  --grad: linear-gradient(90deg, var(--gold-hi), var(--gold) 42%, var(--teal));
+  --grad-gold: linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, var(--gold-lo));
+  --sans: Geist, ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --paper: var(--bg);
+  --paper-2: var(--bg-2);
+  --card: var(--panel-solid);
+  --note: #161b24;
+  --rose: #1a1408;
+  --ink: var(--text);
+  --ink-soft: var(--muted);
+  --coral: var(--gold);
+  --sun: var(--gold-hi);
+  --plum: var(--teal-lo);
+  --wood: var(--gold);
+  --wood-dark: var(--gold-lo);
+  --line: 1px solid rgba(255, 255, 255, 0.09);
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  --drawn: none;
+  --pop: var(--ease);
+  --spring: var(--ease);
+  --ui: var(--sans);
+  --hand: var(--sans);
 }
 * {
   box-sizing: border-box;
@@ -39,7 +70,7 @@ body {
 /* Thin, quiet scrollbars everywhere: a soft thumb, no track. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(43, 38, 34, 0.22) transparent;
+  scrollbar-color: rgba(143, 224, 221, 0.25) transparent;
 }
 ::-webkit-scrollbar {
   width: 6px;
@@ -49,11 +80,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(43, 38, 34, 0.22);
+  background: rgba(143, 224, 221, 0.25);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(43, 38, 34, 0.4);
+  background: rgba(215, 181, 122, 0.4);
 }
 button,
 input,
@@ -66,8 +97,7 @@ textarea {
   inset: 0;
   overflow: hidden;
   background:
-    url('/paper.svg') 0 0 / 360px 360px,
-    radial-gradient(ellipse at 50% 40%, #f8f4ea 0%, var(--paper) 60%, #eae2d0 100%);
+    radial-gradient(ellipse at 50% 30%, #0e1520 0%, var(--bg) 58%, #040508 100%);
 }
 #stage {
   position: absolute;
@@ -1036,3 +1066,194 @@ textarea {
 .btn {
   font-weight: 700;
 }
+
+
+/* ---------------- futuristic HUD ---------------- */
+.brand {
+  background: var(--panel);
+  border: var(--line);
+  border-radius: 14px;
+  padding: 6px 16px 6px 6px;
+  transform: none;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+.brand canvas,
+.brand img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background: rgba(14, 18, 25, 0.9);
+  border: 1px solid rgba(215, 181, 122, 0.35);
+}
+.brand h1,
+.drawer h2,
+.signin h2 {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-style: normal;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand p,
+.bubble .who,
+.drawer header p,
+.msg time,
+.empty,
+.note {
+  font-style: normal;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: var(--line);
+  border-radius: 10px;
+  font-weight: 500;
+}
+.btn.primary {
+  background: var(--grad-gold);
+  color: #1a1408;
+  border-color: transparent;
+}
+.tools .btn,
+.strip,
+.drawer,
+.toast,
+.bubble,
+.nub,
+.signin {
+  filter: none;
+}
+.strip,
+.drawer,
+.toast,
+.signin {
+  background: var(--panel);
+  border: var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+.plaque .board,
+.plaque.is-selected .board {
+  background: var(--panel-solid);
+  border: 1px solid rgba(215, 181, 122, 0.35);
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  padding: 6px 14px 6px;
+  border-radius: 10px;
+}
+.bubble {
+  background: var(--panel);
+  border: var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.bubble::before {
+  display: none;
+}
+.bubble::after {
+  border-top-color: var(--panel-solid);
+}
+.bubble .close {
+  background: var(--panel-solid);
+  color: var(--text);
+  border: var(--line);
+}
+.bubble input {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  color: var(--text);
+}
+.bubble input:focus {
+  border-color: #d7b57a66;
+  box-shadow: 0 0 0 3px #d7b57a12;
+  outline: none;
+}
+.composer {
+  background: transparent;
+  border-top: var(--line);
+}
+.composer textarea,
+.composer input {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  color: var(--text);
+}
+
+/* Rivencast .d-input / .d-send, matched from rivencast.com home demo. */
+.d-input {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(560px, calc(100% - 32px));
+  transform: translateX(-50%);
+  padding: 6px 6px 6px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #00000040;
+  backdrop-filter: blur(16px);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+.d-input:focus-within,
+.d-input.ready {
+  border-color: #d7b57a66;
+  box-shadow: 0 0 0 3px #d7b57a12;
+}
+.d-input .d-field {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: 400 13px/1.4 var(--sans);
+  padding: 6px 0;
+}
+.d-input .d-field::placeholder {
+  color: var(--dim);
+}
+.d-input .d-send {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: #ffffff0f;
+  color: var(--dim);
+  cursor: pointer;
+}
+.d-input.ready .d-send {
+  background: var(--grad-gold);
+  color: #1a1408;
+}
+.d-input .d-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.strip {
+  display: none;
+}
+.chip:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.drawer header { border-bottom: var(--line); }

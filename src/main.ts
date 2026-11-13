@@ -19,6 +19,7 @@ import { createHud, type View } from './ui/hud.ts'
 import { createSound } from './sound.ts'
 import { botById, bubbleOf, createEventLog, latestBotMessage, pendingSent, presenceOf, reduce, type OfficeEvent, type OfficeState } from './state.ts'
 import type { FeedItem, Live, OfficeSnapshot, ReadState } from './protocol.ts'
+import { pulseTalk } from './engine/hana-sprite.ts'
 
 const HANA_ID = 'hana'
 const POLL_STATUS_MS = 20_000
@@ -131,7 +132,7 @@ function officeOf(now: number): OfficeSnapshot {
     at: now,
     bots: [
       {
-        bot: { id: HANA_ID, name: 'Hana', description: 'A sassy roommate with opinions.', shape: 'pebble', color: 'yellow', isGroup: false, createdAt: null },
+        bot: { id: HANA_ID, name: 'Hana', description: 'A sassy roommate with opinions.', shape: 'hana', color: 'teal', isGroup: false, createdAt: null },
         live: liveOf(state, status, now),
         read,
         cursor: { generation: 1, seq: feed.at(-1)?.seq ?? 0 },
@@ -183,7 +184,10 @@ store.subscribe((state, prev) => {
       const before = botById(prev, bot.bot.id)
       if (!before) continue
       const bubble = bubbleOf(state, bot)
-      if (bubble && !bubble.mine && bubble.unread && bubble.key !== bubbleOf(prev, before)?.key) sound.play('reply')
+      if (bubble && !bubble.mine && bubble.key !== bubbleOf(prev, before)?.key) {
+        if (bubble.unread) sound.play('reply')
+        pulseTalk(bot.bot.id)
+      }
       if (bot.live.awaiting && !before.live.awaiting) sound.play('needs')
       if (bot.live.running && !before.live.running) sound.play('wake')
     }

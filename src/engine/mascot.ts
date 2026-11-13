@@ -515,7 +515,7 @@ function drawEyes(c: CanvasRenderingContext2D, pose: Pose, spots: Array<EyeSpot 
 const fine = { fine: true }
 const LINE = 'black' as const
 
-function drawMark(H: Hand, pose: Pose, x: number, y: number) {
+export function drawMark(H: Hand, pose: Pose, x: number, y: number) {
   const t = pose.t
   if (pose.mark === 'z')
     for (let n = 0; n < 3; n++) {

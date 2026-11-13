@@ -7,6 +7,7 @@ import { WALL_H, roomBounds, roomOrigin } from '../engine/world.ts'
 import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
+import { drawHana, talkLift } from '../engine/hana-sprite.ts'
 import { createActor, poke, poseOf, setLive, step, type Actor } from './actors.ts'
 import type { RoomPlan } from '../layout.ts'
 import type { Item } from '../types.ts'
@@ -26,7 +27,7 @@ function hatchOf(ctx: CanvasRenderingContext2D) {
   tile.width = HATCH_PX
   tile.height = HATCH_PX
   const t = tile.getContext('2d')!
-  t.strokeStyle = 'rgba(58, 52, 46, 0.32)'
+  t.strokeStyle = 'rgba(8, 14, 22, 0.55)'
   t.lineWidth = 1.1
   t.beginPath()
   for (const off of [-HATCH_PX, 0, HATCH_PX]) {
@@ -105,7 +106,19 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     if (have) return have
     const k = kinds[it.kind]
     const bx = screenBox(k, it)
-    const s: Sprite = { ratio, x0: bx.x0, y0: bx.y0, cv: printed(bx.x1 - bx.x0, bx.y1 - bx.y0, ratio, bx.x0, bx.y0, (c) => drawThing(mkHand(c, { seed: 1 }), streamOf('item', it.id), k, it, {})) }
+    const s: Sprite = {
+      ratio,
+      x0: bx.x0,
+      y0: bx.y0,
+      cv: printed(bx.x1 - bx.x0, bx.y1 - bx.y0, ratio, bx.x0, bx.y0, (c) => {
+        const H = mkHand(c, { seed: 1 })
+        drawThing(H, streamOf('item', it.id), k, it, {})
+        if (it.kind === 'monitor') {
+          const [x, y] = iso(it.at.i + 0.45, it.at.j + 0.12, (it.at.z ?? 0) + 0.42)
+          H.glow(x, y, 26, 18, 'teal', 0.6)
+        }
+      }),
+    }
     sprites.set(key, s)
     return s
   }
@@ -127,7 +140,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
   // Leaves room at the top for the header and at the bottom for the bot strip.
   function fitZoom(b: { x0: number; y0: number; x1: number; y1: number }) {
     const padX = vw < 700 ? 16 : 60
-    const usableH = vh - (vw < 700 ? 190 : 210)
+    const usableH = vh - (vw < 700 ? 230 : 250)
     const z = Math.min((vw - padX * 2) / (b.x1 - b.x0), usableH / (b.y1 - b.y0))
     return clamp(z, ZOOMS[0], 1.2)
   }
@@ -234,7 +247,11 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
           const p = actorScreen(R, th.actor)
           ctx.save()
           ctx.setTransform(zr() * SCALE, 0, 0, zr() * SCALE, Math.round(devX(p.x)), Math.round(devY(p.y)))
-          drawMascot(mkHand(ctx, { seed: 5 }), looks.get(th.actor.id)!, poseOf(th.actor, t, now))
+          const look = looks.get(th.actor.id)!
+          const pose = poseOf(th.actor, t, now)
+          pose.lift += talkLift(th.actor.id, t)
+          if (look.shape === 'hana') drawHana(mkHand(ctx, { seed: 5 }), pose, th.actor.mood)
+          else drawMascot(mkHand(ctx, { seed: 5 }), look, pose)
           ctx.restore()
           continue
         }
