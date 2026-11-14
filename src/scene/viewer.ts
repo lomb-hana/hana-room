@@ -9,7 +9,8 @@ import { drawBase, layerOf } from '../engine/scene.ts'
 import { CRT_KIND, drawCrtScreen } from '../engine/crt.ts'
 import { RECORD_KIND, drawPlayingRecord } from '../engine/turntable.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
-import { createActor, poke, poseOf, setLive, step, type Actor } from './actors.ts'
+import { createActor, poke, poseOf, setDancing, setLive, step, type Actor } from './actors.ts'
+import { drawParty, prefersReducedMotion } from '../engine/party.ts'
 import type { RoomPlan } from '../layout.ts'
 import type { Item } from '../types.ts'
 import type { Presence } from '../state.ts'
@@ -56,6 +57,7 @@ export type PickHit = { botId: string; bot: boolean; item?: string }
 
 export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage: HTMLCanvasElement; onPick: (pick: PickHit | null) => void }) {
   let musicOn = () => false
+  let party = 0
   const ctx = stage.getContext('2d')!
   let kinds: Record<string, Kind> = {}
   const rooms = new Map<string, RoomEntry>()
@@ -252,12 +254,19 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
           drawCrtScreen(mkHand(ctx, { seed: 2, fine: true }), th.it!, kinds[th.it!.kind], t, lit)
           ctx.restore()
         }
-        if (th.it!.kind === RECORD_KIND && musicOn()) {
+        if (th.it!.kind === RECORD_KIND && (musicOn() || party > 0.02)) {
           ctx.save()
           ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
           drawPlayingRecord(mkHand(ctx, { seed: 3, fine: true }), th.it!, kinds[th.it!.kind], t)
           ctx.restore()
         }
+      }
+      if (party > 0.01) {
+        const dance = R.plan.dance
+        ctx.save()
+        ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
+        drawParty(mkHand(ctx, { seed: 7, fine: true }), t, party, { i: dance.i, j: dance.j }, prefersReducedMotion())
+        ctx.restore()
       }
     }
   }
@@ -426,7 +435,16 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       if (u >= 1) tween = null
     }
     const wall = performance.now()
-    for (const a of actors.values()) step(a, dt, wall)
+    const playing = musicOn()
+    const want = playing ? 1 : 0
+    const reduced = prefersReducedMotion()
+    if (reduced) party = want
+    else party += (want - party) * Math.min(1, dt / (want ? 0.4 : 0.7))
+    if (party < 0.01 && !want) party = 0
+    for (const a of actors.values()) {
+      setDancing(a, playing, wall)
+      step(a, dt, wall)
+    }
     draw(clock)
     for (const fn of frameListeners) fn()
   }

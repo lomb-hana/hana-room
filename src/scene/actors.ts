@@ -54,6 +54,8 @@ export type Actor = {
   walkPhase: number | null
   emote: { mark: Mark; until: number } | null
   tool: string | null
+  // A record is playing: walk to the rug and dance until it stops.
+  dancing: boolean
   R: Rng
 }
 
@@ -78,6 +80,7 @@ export function createActor({ plan, live, now }: { plan: RoomPlan; live: Presenc
     walkPhase: null,
     emote: null,
     tool: live.activity?.tool ?? null,
+    dancing: false,
     R,
   }
 }
@@ -176,7 +179,18 @@ function wanderSpot(a: Actor): Spot {
 }
 
 // The next thing to do in this mood, from where the bot stands.
+export function setDancing(a: Actor, on: boolean, now: number) {
+  if (a.dancing === on) return
+  a.dancing = on
+  if (on) a.emote = { mark: 'note', until: now + 900 }
+  a.task = { kind: 'rest', until: 0 }
+}
+
 function plan(a: Actor, now: number): Task {
+  if (a.dancing) {
+    const spot = a.plan.dance
+    return walkTo(a, spot, { kind: 'do', spot, until: now + 60_000 })
+  }
   if (a.mood === 'sleep') return walkTo(a, a.plan.bed, { kind: 'bed' })
   if (a.mood === 'wait') return walkTo(a, { i: 5.2, j: 4.6, face: 'se', act: 'think' }, { kind: 'do', spot: { i: 5.2, j: 4.6, face: 'se', act: 'think' }, until: now + 6000 })
   if (a.mood === 'idle') {
@@ -207,6 +221,10 @@ export function setLive(a: Actor, live: Presence, now: number) {
     return
   }
   a.mood = mood
+  if (a.dancing) {
+    if (a.task.kind !== 'walk' && a.task.kind !== 'do') a.task = { kind: 'rest', until: 0 }
+    return
+  }
   if (before === 'sleep' && mood !== 'sleep') {
     // Woken up: a startled jump out of bed, then off to work.
     a.emote = { mark: '!', until: now + 1400 }
@@ -315,6 +333,13 @@ export function step(a: Actor, dt: number, now: number) {
       kick(a, 0.2)
     }
     // Pottering about: now and then a little hop and a turn the other way.
+    if (a.dancing) {
+      if (a.R() < dt * 0.7) {
+        a.face = a.face === 'se' ? 'sw' : 'se'
+        kick(a, -0.2)
+      }
+      return
+    }
     if (a.mood === 'idle' && a.R() < dt * 0.4) {
       a.face = a.face === 'se' ? 'sw' : 'se'
       kick(a, -0.25)
@@ -350,6 +375,20 @@ export function poseOf(a: Actor, t: number, now: number): Pose {
     pose.eyes = 'shut'
     pose.mark = 'z'
     pose.lying = true
+  } else if (doing === 'dance' || (a.dancing && a.task.kind === 'do')) {
+    // Bouncy sway, not a typing bob. Softer if the visitor asked for less motion.
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+    pose.eyes = 'happy'
+    pose.mark = Math.sin(t * 3.4 + a.i) > 0 ? 'sparkle' : 'note'
+    if (reduced) {
+      pose.lift += 3 + Math.sin(t * 1.6) * 1.4
+      pose.lean = Math.sin(t * 1.2) * 0.08
+    } else {
+      pose.lift += 7 + Math.abs(Math.sin(t * 6.2)) * 8
+      pose.lean = Math.sin(t * 3.4) * 0.24
+      pose.sx *= 1 + Math.sin(t * 6.2) * 0.08
+      pose.sy *= 1 - Math.sin(t * 6.2) * 0.07
+    }
   } else if (doing && working) {
     pose.eyes = doing === 'type' ? 'focus' : 'open'
     pose.mark = a.mood === 'think' ? 'dots' : doing === 'phone' ? 'note' : null

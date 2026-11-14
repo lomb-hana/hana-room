@@ -13,7 +13,7 @@ import { ROOM } from './engine/world.ts'
 import type { At, Face, Item, Room } from './types.ts'
 import type { BotSnapshot } from './protocol.ts'
 
-export type Act = 'type' | 'browse' | 'read' | 'phone' | 'plug' | 'sip' | 'film' | 'think'
+export type Act = 'type' | 'browse' | 'read' | 'phone' | 'plug' | 'sip' | 'film' | 'think' | 'dance'
 export type Spot = { i: number; j: number; face: Face; act: Act; z?: number }
 export type Theme = 'lobby' | 'shop' | 'lab' | 'calls' | 'studio' | 'library' | 'dev' | 'den'
 
@@ -24,6 +24,8 @@ export type RoomPlan = {
   items: Item[]
   bed: Spot
   work: Spot[]
+  // Center of the rug: where Hana dances when a record is playing.
+  dance: Spot
   // Tiles nothing stands on: where a bot may walk.
   free: boolean[][]
 }
@@ -302,6 +304,7 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     items,
     bed: { i: 7.15, j: 6.55, face: 'se', act: 'think', z: 0.2 },
     work: def.work,
+    dance: { i: 4.1, j: 3.5, face: 'se', act: 'dance' },
     free,
   }
 }

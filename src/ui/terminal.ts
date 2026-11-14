@@ -3,6 +3,7 @@
 // feed) and FILES (daily logs and creations from public/life).
 
 import { ago } from './hud.ts'
+import { renderMarkdown } from './markdown.ts'
 import type { ActivityFeed } from '../api.ts'
 
 export type LifeEntry = { time?: string; title: string; body: string }
@@ -136,11 +137,7 @@ export function createTerminal({ host }: { host: HTMLElement }) {
       if (parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) parts.pop()
       const label = parts.join('  ')
       if (label) body.append(line(label, 'term-entry-title'))
-      if (entry.body) {
-        for (const para of String(entry.body).split(/\n+/)) {
-          if (para.trim()) body.append(line(para.trim(), 'term-entry'))
-        }
-      }
+      if (entry.body) body.append(renderMarkdown(entry.body))
       body.append(el('div', { class: 'term-line term-blank', textContent: ' ' }))
     }
     const creations = Array.isArray(day.creations) ? day.creations : []
@@ -170,8 +167,7 @@ export function createTerminal({ host }: { host: HTMLElement }) {
       void fetch(src, { cache: 'no-store' })
         .then((r) => (r.ok ? r.text() : Promise.reject()))
         .then((text) => {
-          pre.className = 'term-file'
-          pre.textContent = text.trim()
+          pre.replaceWith(renderMarkdown(text.trim()))
         })
         .catch(() => {
           pre.textContent = src

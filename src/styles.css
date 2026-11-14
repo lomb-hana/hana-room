@@ -1220,6 +1220,30 @@ textarea {
   max-height: 220px;
   overflow: auto;
 }
+.md {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 4px 0 10px;
+}
+.md h1, .md h2, .md h3 {
+  color: #b8ff9a;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin: 0.55em 0 0.25em;
+  line-height: 1.25;
+}
+.md h1 { font-size: 15px; }
+.md h2 { font-size: 14px; }
+.md h3 { font-size: 13px; }
+.md p { margin: 0.35em 0; }
+.md ul, .md ol {
+  margin: 0.3em 0 0.5em;
+  padding-left: 1.25em;
+}
+.md li { margin: 0.15em 0; }
+.md strong { color: #d8ffc8; font-weight: 700; }
+.md em { font-style: italic; }
+.md a { color: #b8ff9a; }
 .term-link {
   color: #b8ff9a;
   word-break: break-all;
