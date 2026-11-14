@@ -58,15 +58,6 @@ def main():
             print(f"wrote {out}")
 
         set_status("free-time", "Testing my new room")
-        page.goto(BASE + "/", wait_until="networkidle")
-        page.wait_for_timeout(2000)
-        overview = SCREENS / "room-overview.png"
-        page.screenshot(path=str(overview), full_page=False)
-        print(f"wrote {overview}")
-        page.locator(".d-input").wait_for(timeout=8000)
-        bar = SCREENS / "chat-bar.png"
-        page.locator(".d-input").screenshot(path=str(bar))
-        print(f"wrote {bar}")
         # A short thread so the open-bubble screenshot shows input plus a reply.
         msg = api("POST", "/api/chat", {"name": "Visitor", "text": "Love the new room."}, auth=False)
         api("POST", "/api/reply", {"id": msg["id"], "text": "Thanks. Don't rearrange the furniture, I just got it right."}, auth=True)

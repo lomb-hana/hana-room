@@ -35,7 +35,7 @@ export interface Item {
 }
 
 export interface Floor {
-  style?: 'planks' | 'tiles' | 'checker' | 'carpet' | 'concrete' | 'grass' | 'grid'
+  style?: 'planks' | 'tiles' | 'checker' | 'carpet' | 'concrete' | 'grass'
   ink?: InkName
   tone?: number
   ink2?: InkName
@@ -64,7 +64,6 @@ export interface Room {
   bulb?: { side: Side; pos: number }
   door?: { side: Side; pos: number }
   outdoor?: boolean
-  look?: 'future'
 }
 
 // A kind: the shapes that make one piece of furniture, in its own space.
@@ -151,7 +150,6 @@ export interface ThingCtx {
   images: Record<string, HTMLImageElement | null>
   fine: boolean
   lw?: number
-  crisp?: boolean
 }
 
 export type { Vec, Rng, InkName }

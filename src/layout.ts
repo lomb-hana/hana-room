@@ -247,30 +247,6 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
   const R = streamOf('room', bot.id)
   const theme = themeOf(snapshot)
   const def = themeDef(theme, R)
-  const future = bot.id === 'hana'
-  if (future) {
-    def.walls = { ink: 'blue', tone: 0.1, style: 'plain', ink2: 'teal', tone2: 0.05 }
-    def.floor = { style: 'grid', ink: 'blue', tone: 0.2, ink2: 'teal', tone2: 0.06 }
-    def.rug = 'charcoal'
-    def.things = [
-      { kind: 'holo-desk', at: { i: 5.35, j: 0, face: 'ne' }, colors: { top: 'charcoal', legs: 'black', drawers: 'black', led: 'teal' } },
-      { kind: 'holo-monitor', at: { i: 5.75, j: 0.1, z: 0.86, face: 'ne' }, colors: { body: 'black', screen: 'teal', stand: 'charcoal' } },
-      { kind: 'keyboard', at: { i: 5.85, j: 0.48, z: 0.86, face: 'ne' } },
-      { kind: 'mug', at: { i: 6.85, j: 0.58, z: 0.86, face: 'ne' } },
-      { kind: 'ergo-chair', at: { i: 6.0, j: 1.12, face: 'sw' }, colors: { base: 'black', seat: 'charcoal', back: 'charcoal', trim: 'teal' } },
-      { kind: 'lounge-sofa', at: { i: 0, j: 1.65, face: 'nw' }, colors: { body: 'charcoal', cushion: 'grey', lumbar: 'teal', throw: 'teal', legs: 'black' } },
-      { kind: 'coffee-table', at: { i: 1.55, j: 2.35, face: 'nw' }, colors: { top: 'charcoal', legs: 'black' } },
-      { kind: 'snake-plant', at: { i: 0.12, j: 0.12, face: 'ne' }, colors: { pot: 'charcoal', leaf: 'teal' } },
-      { kind: 'media-shelf', at: { i: 2.15, j: 0, z: 1.48, face: 'ne' } },
-      { kind: 'wall-screen', at: { i: 3.7, j: 0, z: 1.22, face: 'ne' } },
-      { kind: 'nightstand', at: { i: 2.38, j: 5.1, face: 'nw' }, colors: { body: 'charcoal', top: 'black', knob: 'silver' } },
-      { kind: 'table-lamp', at: { i: 2.46, j: 5.18, z: 0.58, face: 'nw' }, colors: { base: 'charcoal', shade: 'silver', light: 'sun' } },
-    ]
-    def.work = [
-      { i: 6.2, j: 1.32, face: 'ne', act: 'type' },
-      { i: 6.55, j: 1.32, face: 'ne', act: 'type' },
-    ]
-  }
   const room: Room = {
     id: bot.id,
     type: theme,
@@ -278,44 +254,32 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     at,
     w: ROOM,
     d: ROOM,
-    look: future ? 'future' : undefined,
     walls: def.walls,
     floor: def.floor,
-    windows: future
-      ? [{ side: 'nw', pos: 6.4, w: 2.55, h: 1.5, z: 1.02 }]
-      : [{ side: 'nw', pos: 7.4, w: 1.6, h: 1.2, z: 1.0 }],
-    bulb: future ? undefined : { side: 'ne', pos: 7.6 },
+    windows: [{ side: 'nw', pos: 7.4, w: 1.6, h: 1.2, z: 1.0 }],
+    bulb: { side: 'ne', pos: 7.6 },
   }
-  const puts: Put[] = future
-    ? [
-        { kind: 'rug', at: { i: 3.05, j: 2.55, face: 'ne' }, colors: { rug: 'charcoal', pattern: 'teal' }, options: { pattern: 'inset' } },
-        ...def.things,
-        { kind: 'platform-bed', at: { i: 0, j: 5.1, face: 'nw' }, colors: { frame: 'charcoal', sheet: 'silver', pillow: 'grey', blanket: 'teal', led: 'teal' } },
-        { kind: 'bed-blanket', at: { i: 1.15, j: 5.55, z: 0.33, face: 'nw' }, colors: { blanket: 'teal', fold: 'aqua' } },
-      ]
-    : [
-        { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: def.rug, pattern: 'cream' } },
-        ...def.things,
-        { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: pk(R, ['terracotta', 'teal', 'mustard', 'plum', 'coral']), blanket: pk(R, ['sky', 'pink', 'mint', 'yellow']) } },
-      ]
+  const puts: Put[] = [
+    { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: def.rug, pattern: 'cream' } },
+    ...def.things,
+    { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: pk(R, ['terracotta', 'teal', 'mustard', 'plum', 'coral']), blanket: pk(R, ['sky', 'pink', 'mint', 'yellow']) } },
+  ]
 
-  if (!future) {
-    // The wall clock points at the next scheduled run; the calendar says "this bot has a schedule".
-    const next = snapshot.automations.filter((a) => a.enabled && a.nextRunAt).sort((a, b) => a.nextRunAt! - b.nextRunAt!)[0]
-    const when = next?.nextRunAt ? new Date(next.nextRunAt) : null
-    puts.push({ kind: 'clock', at: { i: 0, j: 1.1, z: 1.75, face: 'nw' }, options: when ? { hour: when.getHours(), minute: when.getMinutes() } : {} })
-    if (snapshot.automations.length) puts.push({ kind: 'calendar', at: { i: 0, j: 2.2, z: 1.3, face: 'nw' } })
-    if (snapshot.automations.length) puts.push(on('alarm-clock', { i: 6.9, j: 5.75, z: 0, face: 'ne' }))
+  // The wall clock points at the next scheduled run; the calendar says "this bot has a schedule".
+  const next = snapshot.automations.filter((a) => a.enabled && a.nextRunAt).sort((a, b) => a.nextRunAt! - b.nextRunAt!)[0]
+  const when = next?.nextRunAt ? new Date(next.nextRunAt) : null
+  puts.push({ kind: 'clock', at: { i: 0, j: 1.1, z: 1.75, face: 'nw' }, options: when ? { hour: when.getHours(), minute: when.getMinutes() } : {} })
+  if (snapshot.automations.length) puts.push({ kind: 'calendar', at: { i: 0, j: 2.2, z: 1.3, face: 'nw' } })
+  if (snapshot.automations.length) puts.push(on('alarm-clock', { i: 6.9, j: 5.75, z: 0, face: 'ne' }))
 
-    // The todo list: one sticky note per item on a corkboard.
-    const board = { i: 6.4, z: 1.15 }
-    puts.push({ kind: 'corkboard', at: { i: board.i, j: 0, z: board.z, face: 'ne' } })
-    snapshot.todos.slice(-MAX_NOTES).forEach((todo, n) => {
-      const col = n % 4
-      const row = Math.floor(n / 4)
-      puts.push({ kind: 'sticky-note', at: { i: board.i + 0.14 + col * 0.37, j: 0, z: board.z + 0.6 - row * 0.42, face: 'ne' }, colors: { note: NOTE_COLORS[todo.status] } })
-    })
-  }
+  // The todo list: one sticky note per item on a corkboard.
+  const board = { i: 6.4, z: 1.15 }
+  puts.push({ kind: 'corkboard', at: { i: board.i, j: 0, z: board.z, face: 'ne' } })
+  snapshot.todos.slice(-MAX_NOTES).forEach((todo, n) => {
+    const col = n % 4
+    const row = Math.floor(n / 4)
+    puts.push({ kind: 'sticky-note', at: { i: board.i + 0.14 + col * 0.37, j: 0, z: board.z + 0.6 - row * 0.42, face: 'ne' }, colors: { note: NOTE_COLORS[todo.status] } })
+  })
 
   const items: Item[] = puts.map((put, n) => ({ id: `${bot.id}:${n}`, kind: put.kind, name: put.kind, room: bot.id, at: put.at, colors: put.colors, options: put.options }))
   for (const item of items) {
@@ -334,7 +298,7 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     theme,
     room,
     items,
-    bed: future ? { i: 1.18, j: 6.42, face: 'se', act: 'think', z: 0.38 } : { i: 7.15, j: 6.55, face: 'se', act: 'think', z: 0.2 },
+    bed: { i: 7.15, j: 6.55, face: 'se', act: 'think', z: 0.2 },
     work: def.work,
     free,
   }

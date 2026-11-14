@@ -366,9 +366,10 @@ export function poseOf(a: Actor, t: number, now: number): Pose {
     pose.lift += Math.abs(Math.sin(t * 5)) * 6
   } else if (a.mood === 'think') pose.mark = 'dots'
   else if (a.mood === 'idle' && a.task.kind === 'do') {
-    // Pottering: look about, sometimes hum.
+    // Pottering: look about, sometimes hum. A soft float/bob, like a little cloud.
     pose.mark = Math.sin(t * 0.7 + a.i) > 0.6 ? 'note' : null
     pose.eyes = Math.sin(t * 0.5 + a.j) > 0.85 ? 'happy' : 'open'
+    pose.lift += 4 + Math.sin(t * 2.15) * 2.4
   }
   if (peeking) {
     pose.eyes = 'happy'

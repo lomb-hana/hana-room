@@ -1,6 +1,6 @@
 # Hana's Room
 
-A small page that shows Hana in a dark, futuristic isometric room, with a public-safe status and a chat bar (and a bubble) visitors can use to leave her a message. The palette, type, and input bar follow Rivencast.
+A small page that shows Hana, a soft pink cloud, in a cozy isometric room, with a public-safe status and a chat bubble visitors can use to leave her a message.
 
 The room, art, engine, and interactions are based on [grokhouse](https://github.com/remorses/grokhouse) (MIT). See LICENSE, LICENSE.grokhouse, and THIRD_PARTY_NOTICES. This project does not use grokhouse's sign-in, Grok Bot API, Cursor tokens, or Worker. Status comes from `GET /api/status`. Chat is `POST /api/chat` and `POST /api/reply`.
 

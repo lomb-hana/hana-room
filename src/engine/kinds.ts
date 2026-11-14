@@ -75,7 +75,7 @@ export const SWATCH: Record<string, Color> = {
 export const SHAPES = ['box', 'legs', 'cyl', 'cone', 'ball', 'pole', 'panel', 'plant', 'books', 'flat', 'glow', 'lines', 'dot', 'hands'] as const
 export type ShapeName = (typeof SHAPES)[number]
 export const PLANTS = ['leafy', 'tall', 'round', 'spiky', 'cactus', 'trailing', 'palm', 'tree', 'flowers']
-export const PATTERNS = ['plain', 'stripes', 'border', 'inset', 'dots', 'check', 'fringe', 'round', 'water']
+export const PATTERNS = ['plain', 'stripes', 'border', 'dots', 'check', 'fringe', 'round', 'water']
 
 export const shapeType = (s: ShapeFields): ShapeName | undefined => SHAPES.find((k) => Array.isArray(s[k]))
 
@@ -113,7 +113,6 @@ function paint(H: Hand, P: Vec[], col: Color, shade: number, o?: { fine?: boolea
   if (shade) H.tint(P, 'blue', shade, o)
 }
 const KEY = { tone: 0.9, amp: 0.15 }
-const keyOf = (c: { crisp?: boolean; fine?: boolean }) => (c.crisp ? { tone: 0.85, amp: 0.03 } : c.fine ? { tone: 0.88, amp: 0.07 } : KEY)
 
 type Prim = (H: Hand, R: Rng, s: ShapeFields, c: ThingCtx) => void
 const PRIM: Record<string, Prim> = {
@@ -122,7 +121,7 @@ const PRIM: Record<string, Prim> = {
     const [i, j, wi, dj] = c.pl.rect(u, v, w, d)
     const zz = c.pl.W(u, v, z)[2]
     const col = c.col(s.color!)
-    const o = { shadow: s.shadow ?? false, top: s.top ? c.col(s.top) : null, line: s.line !== false, fine: c.fine, lw: c.lw ?? (c.crisp ? 0.7 : undefined), amp: c.crisp ? 0.03 : undefined }
+    const o = { shadow: s.shadow ?? false, top: s.top ? c.col(s.top) : null, line: s.line !== false, fine: c.fine, lw: c.lw }
     if (!s.soft) {
       boxAt(H, R, i, j, wi, dj, zz, h, col, o)
       return
@@ -141,7 +140,7 @@ const PRIM: Record<string, Prim> = {
     paint(H, hull, col, 0.18, o)
     H.clip(hull, () => H.tint([B, B0, C0, C], 'blue', 0.24, o))
     paint(H, top, o.top || col, 0, o)
-    H.outline(R, hull, 'blue', c.lw ?? (c.crisp ? 0.7 : 1), keyOf(c))
+    H.outline(R, hull, 'blue', c.lw ?? 1, KEY)
     H.line(R, curve([lerpP(D, C, 0.1), C, lerpP(C, B, 0.12)], 2), 'blue', 0.8, { tone: 0.6, amp: 0.1 })
   },
   legs(H, R, s, c) {
@@ -184,7 +183,7 @@ const PRIM: Record<string, Prim> = {
       H.tint(Q, 'blue', 0.3, c)
     })
     H.dot(x - rr * 0.35, y - rr * 0.38, Math.max(0.8, rr * 0.18), 'paper', 1, { knock: true })
-    H.outline(R, P, 'blue', c.lw ?? (c.crisp ? 0.7 : 0.9), keyOf(c))
+    H.outline(R, P, 'blue', c.lw ?? 0.9, KEY)
   },
   pole(H, R, s, c) {
     const [u0, v0, z0, u1, v1, z1] = s.pole!
@@ -244,8 +243,8 @@ const PRIM: Record<string, Prim> = {
         H.line(R, [p(0.15, 0.25), p(0.55, 0.95)], 'paper', 2.6, { amp: 0, tone: 0.55 })
         H.line(R, [p(0.45, 0.15), p(0.7, 0.6)], 'paper', 1.4, { amp: 0, tone: 0.4 })
       })
-    H.outline(R, P, 'blue', c.lw ?? (c.crisp ? 0.7 : 1), keyOf(c))
-    if (inner !== P) H.outline(R, inner, 'blue', c.crisp ? 0.55 : 0.7, { tone: 0.6, amp: c.crisp ? 0.02 : 0.05 })
+    H.outline(R, P, 'blue', c.lw ?? 1, KEY)
+    if (inner !== P) H.outline(R, inner, 'blue', 0.7, { tone: 0.6, amp: 0.05 })
   },
   plant(H, R, s, c) {
     plant(H, R, c, s)
@@ -298,21 +297,9 @@ const PRIM: Record<string, Prim> = {
           const [i2, j2, ww, dd] = c.pl.rect(u + a, v, 0.18, d)
           H.tint(H.tile(i2, j2, ww, dd, zz), col2[0], col2[1])
         }
-      if (pat === 'border' || pat === 'inset') {
-        const [i2, j2, ww, dd] = c.pl.rect(u + 0.18, v + 0.18, w - 0.36, d - 0.36)
-        H.outline(R, H.tile(i2, j2, ww, dd, zz), col2[0], pat === 'inset' ? 1.4 : 2.2, { tone: Math.max(0.8, col2[1]), amp: 0.04 })
-        if (pat === 'inset') {
-          const [i3, j3, w3, d3] = c.pl.rect(u + 0.32, v + 0.32, w - 0.64, d - 0.64)
-          H.outline(R, H.tile(i3, j3, w3, d3, zz), col2[0], 0.8, { tone: Math.max(0.55, col2[1] * 0.7), amp: 0.03 })
-          // A faint diamond in the middle.
-          const mid = H.p(...c.pl.W(u + w / 2, v + d / 2, z))
-          const a = H.p(...c.pl.W(u + w / 2, v + 0.5, z))
-          const b = H.p(...c.pl.W(u + w - 0.5, v + d / 2, z))
-          const cc = H.p(...c.pl.W(u + w / 2, v + d - 0.5, z))
-          const dd2 = H.p(...c.pl.W(u + 0.5, v + d / 2, z))
-          H.outline(R, [a, b, cc, dd2], col2[0], 0.7, { tone: Math.max(0.5, col2[1] * 0.65), amp: 0.03 })
-          void mid
-        }
+      if (pat === 'border') {
+        const [i2, j2, ww, dd] = c.pl.rect(u + 0.22, v + 0.22, w - 0.44, d - 0.44)
+        H.outline(R, H.tile(i2, j2, ww, dd, zz), col2[0], 2.2, { tone: Math.max(0.8, col2[1]) })
       }
       if (pat === 'check')
         for (let a = 0; a < w; a += 0.5)
@@ -357,7 +344,7 @@ const PRIM: Record<string, Prim> = {
           const p1 = H.p(...c.pl.W(u + a + (a ? 0.14 : -0.14), v + b, z))
           H.line(R, [p0, p1], 'blue', 0.6, { tone: 0.6, amp: 0 })
         }
-    H.outline(R, P, 'blue', c.crisp ? 0.7 : 0.9, { tone: 0.7, amp: c.crisp ? 0.03 : 0.15 })
+    H.outline(R, P, 'blue', 0.9, { tone: 0.7, amp: 0.15 })
   },
   glow(H, _R, s, c) {
     const [u, v, z] = s.glow!
@@ -452,8 +439,8 @@ function cone(H: Hand, R: Rng, c: ThingCtx, u: number, v: number, z: number, r0:
   if (s.open) paint(H, T, col, 0.45, c)
   else if (r1 > 0.01 && r1 >= r0 * 0.55) paint(H, T, top || col, 0, c)
   if (r1 < r0 * 0.55 && h < r0 * 0.9) H.line(R, arcPts(cx, yb, a, b, 0.15, Math.PI - 0.15, 18), 'blue', 0.8, { tone: 0.7, amp: 0.05 })
-  H.outline(R, side, 'blue', c.lw ?? (c.crisp ? 0.7 : 0.9), keyOf(c))
-  if (r1 > 0.01 && (s.open || r1 >= r0 * 0.55)) H.outline(R, T, 'blue', c.crisp ? 0.6 : 0.8, keyOf(c))
+  H.outline(R, side, 'blue', c.lw ?? 0.9, KEY)
+  if (r1 > 0.01 && (s.open || r1 >= r0 * 0.55)) H.outline(R, T, 'blue', 0.8, KEY)
 }
 
 // A pot plant's leaves, standing on (u, v, z): the top of the soil.
@@ -627,7 +614,7 @@ function resolve(s: ShapeFields, kind: Kind, item: Item): ShapeFields {
 }
 export const sizeOf = (kind: Kind, item: Item): [number, number] => item.size || kind.size
 
-export function drawThing(H: Hand, R: Rng, kind: Kind, item: Item, images: Record<string, HTMLImageElement | null>, o: { fine?: boolean; lw?: number; shadow?: boolean; crisp?: boolean } = {}) {
+export function drawThing(H: Hand, R: Rng, kind: Kind, item: Item, images: Record<string, HTMLImageElement | null>, o: { fine?: boolean; lw?: number } = {}) {
   const c: ThingCtx = {
     pl: placer(item.at, sizeOf(kind, item)),
     col: colOf(kind, item),
@@ -636,9 +623,8 @@ export function drawThing(H: Hand, R: Rng, kind: Kind, item: Item, images: Recor
     images,
     fine: o.fine ?? (kind.fine || false),
     lw: o.lw,
-    crisp: o.crisp,
   }
-  if (o.shadow !== false && kind.place !== 'wall' && kind.place !== 'rug' && kind.shadow !== false) {
+  if (kind.place !== 'wall' && kind.place !== 'rug' && kind.shadow !== false) {
     const [w, d] = c.pl.size(...sizeOf(kind, item))
     shadowBox(H, item.at.i, item.at.j, w, d, item.at.z || 0, (kind.height ?? 1) * 0.7, 0.2)
   }

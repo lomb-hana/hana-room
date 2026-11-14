@@ -60,7 +60,7 @@ const EYES = eyes(0.26, 0.57, 0.64, 0.12)
 // Sizes and builds from the app's model table; size 1.17 is a blob.
 const SHAPES: Record<string, ShapeDef> = {
   sphere: { build: { kind: 'sphere' }, size: 1.17, eyes: EYES },
-  cloud: { build: { kind: 'loft', depth: 0.72 }, size: 1.3455, eyes: eyes(0.213, 0.467, 0.47, 0.07) },
+  cloud: { build: { kind: 'loft', depth: 0.78 }, size: 1.3455, eyes: eyes(0.17, 0.36, 0.42, 0.04) },
   square: { build: slab, size: 1.0413, eyes: eyes(0.255, 0.56, 0.529, 0.12) },
   sparkle: { build: slab, size: 1.521, eyes: eyes(0.184, 0.403, 0.412, 0) },
   clover: { build: slab, size: 1.0881, eyes: eyes(0.233, 0.511, 0.559, -0.02) },
@@ -108,6 +108,7 @@ const COLORS: Record<string, string> = {
   purple: '#885ff5',
   magenta: '#e85098',
   pink: '#e85098',
+  blush: '#f3b6c8',
   gray: '#777777',
   grey: '#777777',
 }

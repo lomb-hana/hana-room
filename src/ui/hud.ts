@@ -4,7 +4,6 @@
 
 import { mkHand } from '../engine/press.ts'
 import { drawMascot, type Look, type Pose } from '../engine/mascot.ts'
-import { portraitHana } from '../engine/hana-sprite.ts'
 import type { Mood } from '../scene/actors.ts'
 import type { Sound } from '../sound.ts'
 import type { Bot, Bubble, Presence, Sent } from '../state.ts'
@@ -111,10 +110,6 @@ export function portrait(look: Look, size = 68) {
   cv.width = size * 2
   cv.height = size * 2
   const c = cv.getContext('2d')!
-  if (look.shape === 'hana') {
-    portraitCache.set(key, portraitHana(size))
-    return portraitCache.get(key)!
-  }
   const k = (size * 2) / 46
   c.setTransform(k, 0, 0, k, size, size * 2 - 7 * k)
   const pose: Pose = { t: 1, face: 'se', sx: 1, sy: 1, lean: 0, lift: 0, eyes: 'open', mark: null }
@@ -141,8 +136,8 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
   let drawerFor: string | null = null
 
   // ---------------- top bar ----------------
-  const brandMascot = el('img', { src: portrait({ shape: 'hana', color: 'teal' }, 92), alt: '' })
-  brandMascot.style.cssText = 'width:46px;height:46px;border-radius:10px;background:rgba(14,18,25,.9);border:1px solid rgba(215,181,122,.35)'
+  const brandMascot = el('img', { src: portrait({ shape: 'cloud', color: 'blush' }, 92), alt: '' })
+  brandMascot.style.cssText = 'width:46px;height:46px;border-radius:4px;background:#f8e4ea;border:1.4px solid var(--ink)'
   const brandSub = el('p')
   const brand = el('div', { class: 'brand' }, brandMascot, el('div', {}, el('h1', { textContent: "Hana's Room" }), brandSub))
   const account = el('span', { class: 'account' })
@@ -169,47 +164,6 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
     el('button', { class: 'btn', title: 'See every room', onclick: () => (actions.select(null), viewer.fit()) }, '⤢', el('span', { class: 'label', textContent: 'Fit room' })),
   )
   topbar.append(brand, tools)
-
-  // Persistent Rivencast-style bar at the bottom of the room.
-  const barInput = el('input', {
-    type: 'text',
-    class: 'd-field',
-    placeholder: 'Message Hana…',
-    maxLength: 300,
-    autocomplete: 'off',
-    ariaLabel: 'Message Hana',
-  }) as HTMLInputElement
-  const barSend = el('button', {
-    class: 'd-send',
-    type: 'button',
-    title: 'Send',
-    ariaLabel: 'Send message',
-    innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  }) as HTMLButtonElement
-  const bar = el('form', { class: 'd-input', role: 'search' }, barInput, barSend)
-  const syncReady = () => bar.classList.toggle('ready', Boolean(barInput.value.trim()))
-  barInput.addEventListener('input', syncReady)
-  const submitBar = async () => {
-    const text = barInput.value.trim()
-    if (!text) return
-    barSend.disabled = true
-    const ok = await actions.send('hana', text)
-    barSend.disabled = false
-    if (ok) {
-      barInput.value = ''
-      syncReady()
-    }
-  }
-  bar.addEventListener('submit', (e) => {
-    e.preventDefault()
-    void submitBar()
-  })
-  barSend.addEventListener('click', (e) => {
-    e.preventDefault()
-    void submitBar()
-  })
-  document.getElementById('view')?.append(bar)
-
   let signin: HTMLElement | null = null
 
   function renderTop(v: View) {

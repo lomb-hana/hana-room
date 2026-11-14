@@ -7,7 +7,6 @@ import { WALL_H, roomBounds, roomOrigin } from '../engine/world.ts'
 import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
-import { drawHana, talkLift, HANA_H } from '../engine/hana-sprite.ts'
 import { createActor, poke, poseOf, setLive, step, type Actor } from './actors.ts'
 import type { RoomPlan } from '../layout.ts'
 import type { Item } from '../types.ts'
@@ -27,7 +26,7 @@ function hatchOf(ctx: CanvasRenderingContext2D) {
   tile.width = HATCH_PX
   tile.height = HATCH_PX
   const t = tile.getContext('2d')!
-  t.strokeStyle = 'rgba(8, 14, 22, 0.55)'
+  t.strokeStyle = 'rgba(58, 52, 46, 0.32)'
   t.lineWidth = 1.1
   t.beginPath()
   for (const off of [-HATCH_PX, 0, HATCH_PX]) {
@@ -106,24 +105,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     if (have) return have
     const k = kinds[it.kind]
     const bx = screenBox(k, it)
-    const s: Sprite = {
-      ratio,
-      x0: bx.x0,
-      y0: bx.y0,
-      cv: printed(bx.x1 - bx.x0, bx.y1 - bx.y0, ratio, bx.x0, bx.y0, (c) => {
-        const H = mkHand(c, { seed: 1 })
-        const future = rooms.get(it.room)?.plan.room.look === 'future'
-        drawThing(H, streamOf('item', it.id), k, it, {}, future ? { shadow: false, fine: true, lw: 0.7, crisp: true } : {})
-        if (it.kind === 'monitor' || it.kind === 'holo-monitor') {
-          const [x, y] = iso(it.at.i + 0.48, it.at.j + 0.14, (it.at.z ?? 0) + 0.45)
-          H.glow(x, y, 32, 22, 'teal', 0.7)
-        }
-        if (it.kind === 'table-lamp') {
-          const [x, y] = iso(it.at.i + 0.2, it.at.j + 0.2, (it.at.z ?? 0) + 0.55)
-          H.glow(x, y, 22, 18, 'sun', 0.45)
-        }
-      }),
-    }
+    const s: Sprite = { ratio, x0: bx.x0, y0: bx.y0, cv: printed(bx.x1 - bx.x0, bx.y1 - bx.y0, ratio, bx.x0, bx.y0, (c) => drawThing(mkHand(c, { seed: 1 }), streamOf('item', it.id), k, it, {})) }
     sprites.set(key, s)
     return s
   }
@@ -145,7 +127,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
   // Leaves room at the top for the header and at the bottom for the bot strip.
   function fitZoom(b: { x0: number; y0: number; x1: number; y1: number }) {
     const padX = vw < 700 ? 16 : 60
-    const usableH = vh - (vw < 700 ? 230 : 250)
+    const usableH = vh - (vw < 700 ? 190 : 210)
     const z = Math.min((vw - padX * 2) / (b.x1 - b.x0), usableH / (b.y1 - b.y0))
     return clamp(z, ZOOMS[0], 1.2)
   }
@@ -180,10 +162,14 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     moveTo({ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 + 30, z: fitZoom(b) }, animate)
   }
 
-  function focus(_botId: string) {
-    // One room, no details drawer: keep the whole apartment in view.
-    userCam = false
-    fit(true)
+  function focus(botId: string) {
+    const R = rooms.get(botId)
+    if (!R) return
+    userCam = true
+    const z = clamp(Math.min(vw / 900, vh / 640) * 1.15, 0.7, 1.75)
+    // Off-centre to the left so the details drawer on the right does not cover it.
+    const shift = vw > 900 ? 190 / z : 0
+    moveTo({ x: R.ox + (R.b.x0 + R.b.x1) / 2 + shift, y: R.oy + (R.b.y0 + R.b.y1) / 2 + 20, z }, true)
   }
 
   function zoomBy(stepBy: number, px?: number, py?: number) {
@@ -238,21 +224,17 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       const things: Array<{ key: number; it?: Item; actor?: Actor }> = []
       for (const it of R.plan.items) {
         const k = kinds[it.kind]
-        if (k && layerOf(k) === 'stand') things.push({ key: depthOf(k, it) + (it.kind === 'bed-blanket' ? 0.85 : 0), it })
+        if (k && layerOf(k) === 'stand') things.push({ key: depthOf(k, it), it })
       }
       const actor = actors.get(R.plan.botId)
-      if (actor) things.push({ key: actor.i + actor.j + (actor.z > 0 ? 0.3 : 0.01) + (actor.task.kind === 'bed' ? 0.5 : 0), actor })
+      if (actor) things.push({ key: actor.i + actor.j + (actor.z > 0 ? 0.3 : 0.01), actor })
       things.sort((a, b) => a.key - b.key)
       for (const th of things) {
         if (th.actor) {
           const p = actorScreen(R, th.actor)
           ctx.save()
           ctx.setTransform(zr() * SCALE, 0, 0, zr() * SCALE, Math.round(devX(p.x)), Math.round(devY(p.y)))
-          const look = looks.get(th.actor.id)!
-          const pose = poseOf(th.actor, t, now)
-          pose.lift += talkLift(th.actor.id, t)
-          if (look.shape === 'hana') drawHana(mkHand(ctx, { seed: 5 }), pose, th.actor.mood, th.actor.id)
-          else drawMascot(mkHand(ctx, { seed: 5 }), look, pose)
+          drawMascot(mkHand(ctx, { seed: 5 }), looks.get(th.actor.id)!, poseOf(th.actor, t, now))
           ctx.restore()
           continue
         }
@@ -280,10 +262,9 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       const R = rooms.get(id)
       if (!R) continue
       const p = actorScreen(R, a)
-      const body = looks.get(id)?.shape === 'hana' ? HANA_H : BODY
-      const cy = p.y - (body / 2 + a.z * 32 + 4) * SCALE
+      const cy = p.y - (BODY / 2 + a.z * 32 + 4) * SCALE
       const d = Math.hypot(wx - p.x, wy - cy)
-      if (d < body * SCALE * 0.75 && (!best || d < best.d)) best = { id, d }
+      if (d < BODY * SCALE * 0.75 && (!best || d < best.d)) best = { id, d }
     }
     if (best) return { botId: best.id, bot: true }
     // Then the room whose floor diamond (or walls above it) is under the pointer.
@@ -462,8 +443,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       const a = actors.get(botId)
       if (!R || !a) return null
       const p = actorScreen(R, a)
-      const body = looks.get(botId)?.shape === 'hana' ? HANA_H : BODY
-      const head = { x: devX(p.x) / dpr, y: devY(p.y - (body + 14 + a.z * 32) * SCALE) / dpr }
+      const head = { x: devX(p.x) / dpr, y: devY(p.y - (BODY + 8 + a.z * 32) * SCALE) / dpr }
       // The sign hangs over the room's back corner, the top of its box.
       const corner = iso(0, 0, WALL_H)
       const sign = { x: devX(R.ox + corner[0]) / dpr, y: devY(R.oy + corner[1] - 10) / dpr }
