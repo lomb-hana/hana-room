@@ -292,8 +292,39 @@ function serveStatic(req, res, urlPath) {
     }
   }
   const ext = path.extname(file).toLowerCase()
-  const cache = ext === '.html' ? 'no-store' : ext === '.json' ? 'no-cache, must-revalidate' : 'public, max-age=3600'
-  res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': cache })
+  const type = MIME[ext] || 'application/octet-stream'
+  const isMedia = ext === '.mp3' || ext === '.wav' || ext === '.ogg' || ext === '.m4a'
+  const cache = ext === '.html' ? 'no-store' : ext === '.json' ? 'no-cache, must-revalidate' : isMedia ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'
+  const size = stat.size
+  const headers = {
+    'content-type': type,
+    'cache-control': cache,
+    'accept-ranges': 'bytes',
+  }
+  const range = header(req, 'range')
+  if (range && req.method !== 'HEAD') {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(String(range).trim())
+    if (!m) {
+      res.writeHead(416, { ...headers, 'content-range': `bytes */${size}` })
+      return res.end()
+    }
+    let start = m[1] === '' ? size - Number(m[2] || size) : Number(m[1])
+    let end = m[2] === '' ? size - 1 : Number(m[2])
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start >= size || end < start) {
+      res.writeHead(416, { ...headers, 'content-range': `bytes */${size}` })
+      return res.end()
+    }
+    end = Math.min(end, size - 1)
+    res.writeHead(206, {
+      ...headers,
+      'content-length': end - start + 1,
+      'content-range': `bytes ${start}-${end}/${size}`,
+    })
+    fs.createReadStream(file, { start, end }).pipe(res)
+    return
+  }
+  res.writeHead(200, { ...headers, 'content-length': size })
+  if (req.method === 'HEAD') return res.end()
   fs.createReadStream(file).pipe(res)
 }
 

@@ -7,6 +7,7 @@ import { WALL_H, roomBounds, roomOrigin } from '../engine/world.ts'
 import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
 import { CRT_KIND, drawCrtScreen } from '../engine/crt.ts'
+import { RECORD_KIND, drawPlayingRecord } from '../engine/turntable.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
 import { createActor, poke, poseOf, setLive, step, type Actor } from './actors.ts'
 import type { RoomPlan } from '../layout.ts'
@@ -54,6 +55,7 @@ export type Anchor = { x: number; y: number; visible: boolean }
 export type PickHit = { botId: string; bot: boolean; item?: string }
 
 export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage: HTMLCanvasElement; onPick: (pick: PickHit | null) => void }) {
+  let musicOn = () => false
   const ctx = stage.getContext('2d')!
   let kinds: Record<string, Kind> = {}
   const rooms = new Map<string, RoomEntry>()
@@ -250,6 +252,12 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
           drawCrtScreen(mkHand(ctx, { seed: 2, fine: true }), th.it!, kinds[th.it!.kind], t, lit)
           ctx.restore()
         }
+        if (th.it!.kind === RECORD_KIND && musicOn()) {
+          ctx.save()
+          ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
+          drawPlayingRecord(mkHand(ctx, { seed: 3, fine: true }), th.it!, kinds[th.it!.kind], t)
+          ctx.restore()
+        }
       }
     }
   }
@@ -277,16 +285,19 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       if (d < BODY * SCALE * 0.75 && (!best || d < best.d)) best = { id, d }
     }
     if (best) return { botId: best.id, bot: true }
-    // The 80s PC, before the room floor, so a click opens the activity window.
+    // Clickable room props, before the floor: the 80s PC and the record player.
+    let prop: { botId: string; item: string; area: number } | null = null
     for (const R of [...rooms.values()].reverse()) {
       for (const it of R.plan.items) {
-        if (it.kind !== CRT_KIND || !kinds[it.kind]) continue
+        if ((it.kind !== CRT_KIND && it.kind !== RECORD_KIND) || !kinds[it.kind]) continue
         const bx = screenBox(kinds[it.kind], it)
         if (wx >= R.ox + bx.x0 && wx <= R.ox + bx.x1 && wy >= R.oy + bx.y0 && wy <= R.oy + bx.y1) {
-          return { botId: R.plan.botId, bot: false, item: CRT_KIND }
+          const area = (bx.x1 - bx.x0) * (bx.y1 - bx.y0)
+          if (!prop || area < prop.area) prop = { botId: R.plan.botId, item: it.kind, area }
         }
       }
     }
+    if (prop) return { botId: prop.botId, bot: false, item: prop.item }
     // Then the room whose floor diamond (or walls above it) is under the pointer.
     for (const R of [...rooms.values()].reverse()) {
       const lx = wx - R.ox
@@ -336,6 +347,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     const hit = pick(...at(e))
     stage.classList.toggle('is-bot', Boolean(hit?.bot))
     stage.classList.toggle('is-pc', hit?.item === CRT_KIND)
+    stage.classList.toggle('is-player', hit?.item === RECORD_KIND)
   })
   const end = (e: PointerEvent) => {
     pointers.delete(e.pointerId)
@@ -448,6 +460,9 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
         }
       }
       if (!userCam) fit(false)
+    },
+    setMusic(fn: () => boolean) {
+      musicOn = fn
     },
     setLive(botId: string, live: Presence) {
       const a = actors.get(botId)

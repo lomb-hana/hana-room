@@ -43,6 +43,17 @@ That posts to `/api/activity` using the same secret file as `set-status.sh`. Lab
 
 Click the 80s PC in the room to open a small terminal window with the current task and recent activity.
 
+
+## Records
+
+Click the record player on the dresser to open Hana's playlist. Songs live in `public/music/` and the list is `public/music/songs.json` (`title`, `file`, `duration` in seconds, `added` date). Playback starts only after you press Play; each track can be paused, stopped, or restarted.
+
+To add a new song (copies the file, updates the manifest, commits, and pushes):
+
+```bash
+./add-song.sh ./new-track.mp3 "Song Title"
+```
+
 ## Reply to a visitor
 
 ```bash

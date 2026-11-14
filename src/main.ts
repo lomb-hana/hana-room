@@ -14,6 +14,7 @@ import { setDither } from './engine/press.ts'
 import type { Kind } from './engine/kinds.ts'
 import { api, type ActivityFeed, type ChatMessage, type RoomState, type RoomStatus } from './api.ts'
 import { createTerminal } from './ui/terminal.ts'
+import { createRecords } from './ui/records.ts'
 import { planOffice } from './layout.ts'
 import { createViewer } from './scene/viewer.ts'
 import { createHud, type View } from './ui/hud.ts'
@@ -45,6 +46,7 @@ let kinds: Record<string, Kind> = {}
 const sound = createSound()
 
 const terminal = createTerminal({ host: view })
+const records = createRecords({ host: view })
 
 const viewer = createViewer({
   view,
@@ -55,9 +57,15 @@ const viewer = createViewer({
       terminal.toggle()
       return
     }
+    if (pick?.item === 'record-player') {
+      sound.play('tap')
+      records.toggle()
+      return
+    }
     select(pick?.botId ?? null, { focus: !pick?.bot })
   },
 })
+viewer.setMusic(() => records.isPlaying())
 const hud = createHud({
   layer: document.querySelector('#layer')!,
   topbar: document.querySelector('#topbar')!,
