@@ -41,8 +41,13 @@ That posts to `/api/status` using the secret at `~/.hana-room-secret` (instant, 
 
 That posts to `/api/activity` using the same secret file as `set-status.sh`. Labels are sanitized on the server (no emails, URLs, phone numbers, dollar amounts, or card numbers; 60 character cap). If the room is unreachable, `work.sh` exits 0 quietly so it never breaks other work. A task whose label starts with `me-time` returns to free-time when done; otherwise she goes idle. If she is working with no update for 45 minutes, the server expires the task back to idle.
 
-Click the 80s PC in the room to open a small terminal window with the current task and recent activity.
+Click the 80s PC in the room to open a paper window docked under the "Hana's Room" card. The NOW tab is the current task and recent activity. The FILES tab is Hana's public daily log and creations, one day at a time.
 
+
+
+## Public log
+
+`./publish-life.sh [YYYY-MM-DD]` (default: today) reads Hana's me-time journal at `/workspace/hana-life/<day>/journal.md` and optional `public-creations.json`, writes `public/life/`, commits only that folder, and pushes. It never reads `log.md`. A privacy filter strips emails, most URLs (suno.com, instagram.com, and this room are allowed), phone numbers, dollar amounts, card or account numbers, and street addresses, and drops any entry or paragraph that mentions Daniel's personal life, family, money, bills, banks, or accounts. If nothing changed, the script exits quietly.
 
 ## Records
 

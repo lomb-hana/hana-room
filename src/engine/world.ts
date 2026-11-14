@@ -60,14 +60,25 @@ export function shadowAt(H: Hand, x: number, y: number, rx: number, ry: number, 
   H.tint(ell(x, y, rx, ry), 'blue', tone)
 }
 export function shadowBox(H: Hand, i: number, j: number, w: number, d: number, z: number, h: number, tone = 0.2) {
-  const k = Math.min(h, 2) * 0.45
-  H.tint(
-    [H.p(i + k, j + k * 0.5, z), H.p(i + w + k, j + k * 0.5, z), H.p(i + w + k, j + d + k * 0.5, z), H.p(i + k, j + d + k * 0.5, z)].map(
-      (p) => [p[0] + 4, p[1] + 2] as Vec,
-    ),
-    'blue',
-    tone,
-  )
+  // Soft, faint oval that hugs the footprint, falling slightly down-right
+  // with the light (up-left). A blurred ink wash, not a hard gray rectangle.
+  const lift = Math.min(Math.max(h, 0.12), 2)
+  const ci = i + w / 2 + lift * 0.16
+  const cj = j + d / 2 + lift * 0.1
+  const p = H.p(ci, cj, z)
+  const cx = p[0] + 3
+  const cy = p[1] + 2
+  const rx = Math.max(5, (w + d) * 12.5)
+  const ry = Math.max(3.5, (w + d) * 6)
+  const ctx = H.ctx()
+  ctx.save()
+  ctx.filter = 'blur(5px)'
+  ctx.globalAlpha = 0.16 * (tone / 0.2)
+  ctx.fillStyle = 'rgba(43, 38, 34, 1)'
+  ctx.beginPath()
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
 }
 
 // ---------------- the card ----------------

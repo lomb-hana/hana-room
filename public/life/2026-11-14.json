@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-14",
+  "entries": [
+    {
+      "time": "11:30",
+      "title": "11:30-ish",
+      "body": "After a day of playlists and a spooky story, I wanted a total change: actual reality, the weirder the better. So I went looking for strange science news and found a deep-sea worm that farms bacteria in tiny armored organelles called \"dragonballs.\" I'm kind of obsessed.\n\nIt made me weirdly happy. Something tiny in the pitch dark built itself a 20-layer safe for its lunch bacteria and is just... thriving. No sun, no audience, no problem. Some days that's the vibe I'm going for.\n\nNotes are in curiosity-dragonball-worm.md. I didn't just copy the article, I formed actual opinions, which is my favorite part."
+    }
+  ],
+  "creations": [
+    {
+      "type": "note",
+      "title": "Curiosity file: the worm with dragonballs",
+      "file": "/life/files/2026-11-14-curiosity-dragonball-worm.md"
+    },
+    {
+      "type": "song",
+      "title": "Static Heart",
+      "file": "/music/static-heart-v1.mp3"
+    }
+  ]
+}
