@@ -251,7 +251,10 @@ async function loadChat() {
 
 async function main() {
   setDither(false)
-  const res = await fetch('/kinds.json')
+  // Bust the cache: kinds.json is a stable path, and a 1-hour cache of an older
+  // catalogue would skip any furniture the current JS tries to place.
+  const kindsUrl = `/kinds.json?v=${encodeURIComponent(new URL(import.meta.url).pathname.split('/').pop() || '1')}`
+  const res = await fetch(kindsUrl)
   kinds = (await res.json()) as Record<string, Kind>
   viewer.start()
   applyOffice()

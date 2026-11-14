@@ -4,7 +4,7 @@
 
 import { iso, mkHand, lerp, streamOf, clamp } from '../engine/press.ts'
 import { WALL_H, roomBounds, roomOrigin } from '../engine/world.ts'
-import { depthOf, drawThing, screenBox, sizeOf, type Kind } from '../engine/kinds.ts'
+import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
 import { drawHana, talkLift, HANA_H } from '../engine/hana-sprite.ts'
@@ -17,43 +17,6 @@ const ZOOMS = [0.3, 0.36, 0.42, 0.5, 0.56, 0.62, 0.7, 0.8, 0.9, 1, 1.15, 1.3, 1.
 const MAX_RATIO = 3
 const SCALE = 1.3 // how big a mascot stands in its room
 const FOCUS_MS = 900
-
-const NEON_Z: Record<string, number> = { desk: 0.86, 'holo-desk': 0.86, sofa: 0.82, 'lounge-sofa': 0.82, 'bot-bed': 0.22, 'platform-bed': 0.32, nightstand: 0.58 }
-
-function neonRim(H: ReturnType<typeof mkHand>, it: Item, k: Kind) {
-  const [w, d] = sizeOf(k, it)
-  const z = (it.at.z || 0) + (NEON_Z[it.kind] ?? 0.8)
-  const P = [
-    iso(it.at.i, it.at.j, z),
-    iso(it.at.i + w, it.at.j, z),
-    iso(it.at.i + w, it.at.j + d, z),
-    iso(it.at.i, it.at.j + d, z),
-  ]
-  const c = H.ctx()
-  c.save()
-  c.lineJoin = 'round'
-  c.lineCap = 'round'
-  c.strokeStyle = 'rgba(143, 224, 221, 0.55)'
-  c.lineWidth = 1.35
-  c.shadowColor = 'rgba(143, 224, 221, 0.45)'
-  c.shadowBlur = 5
-  c.beginPath()
-  c.moveTo(P[0][0], P[0][1])
-  for (const q of P.slice(1)) c.lineTo(q[0], q[1])
-  c.closePath()
-  c.stroke()
-  // A thin red/pink edge on the front-right lip, matching Hana's streak.
-  c.shadowColor = 'rgba(255, 90, 140, 0.4)'
-  c.shadowBlur = 4
-  c.strokeStyle = 'rgba(255, 90, 140, 0.4)'
-  c.lineWidth = 1
-  c.beginPath()
-  c.moveTo(P[1][0], P[1][1])
-  c.lineTo(P[2][0], P[2][1])
-  c.stroke()
-  c.restore()
-}
-
 
 // Diagonal pen strokes, one tile repeated: the hatching of drawn shadows.
 const HATCH_PX = 6
@@ -159,7 +122,6 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
           const [x, y] = iso(it.at.i + 0.2, it.at.j + 0.2, (it.at.z ?? 0) + 0.55)
           H.glow(x, y, 22, 18, 'sun', 0.45)
         }
-        if (future && NEON_Z[it.kind] != null) neonRim(H, it, k)
       }),
     }
     sprites.set(key, s)
@@ -218,14 +180,10 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     moveTo({ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 + 30, z: fitZoom(b) }, animate)
   }
 
-  function focus(botId: string) {
-    const R = rooms.get(botId)
-    if (!R) return
-    userCam = true
-    const z = clamp(Math.min(vw / 900, vh / 640) * 1.15, 0.7, 1.75)
-    // Off-centre to the left so the details drawer on the right does not cover it.
-    const shift = vw > 900 ? 190 / z : 0
-    moveTo({ x: R.ox + (R.b.x0 + R.b.x1) / 2 + shift, y: R.oy + (R.b.y0 + R.b.y1) / 2 + 20, z }, true)
+  function focus(_botId: string) {
+    // One room, no details drawer: keep the whole apartment in view.
+    userCam = false
+    fit(true)
   }
 
   function zoomBy(stepBy: number, px?: number, py?: number) {
@@ -283,7 +241,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
         if (k && layerOf(k) === 'stand') things.push({ key: depthOf(k, it) + (it.kind === 'bed-blanket' ? 0.85 : 0), it })
       }
       const actor = actors.get(R.plan.botId)
-      if (actor) things.push({ key: actor.i + actor.j + (actor.z > 0 ? 0.3 : 0.01), actor })
+      if (actor) things.push({ key: actor.i + actor.j + (actor.z > 0 ? 0.3 : 0.01) + (actor.task.kind === 'bed' ? 0.5 : 0), actor })
       things.sort((a, b) => a.key - b.key)
       for (const th of things) {
         if (th.actor) {

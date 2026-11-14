@@ -32,6 +32,7 @@ function load(src: string) {
 
 const front = load('/sprites/hana-front-512.png')
 const back = load('/sprites/hana-back-512.png')
+const sleep = load('/sprites/hana-sleep-512.png')
 function ready(im: HTMLImageElement) {
   return im.complete && im.naturalWidth > 0
 }
@@ -56,6 +57,20 @@ function drawSprite(c: CanvasRenderingContext2D, im: HTMLImageElement, flip: boo
   c.restore()
 }
 
+function drawSleep(c: CanvasRenderingContext2D, flip: boolean, sx: number, sy: number) {
+  const im = ready(sleep) ? sleep : front
+  if (!ready(im)) return
+  // Match standing height; the sleep art is nearly square, so this keeps her
+  // the same size in bed instead of shrinking her.
+  const h = HANA_H
+  const w = (im.naturalWidth / im.naturalHeight) * h
+  c.save()
+  c.imageSmoothingEnabled = false
+  c.scale(flip ? -sx : sx, sy)
+  c.drawImage(im, -w / 2, -h / 2, w, h)
+  c.restore()
+}
+
 export function drawHana(H: Hand, pose: Pose, _mood?: Mood, id?: string) {
   const c = H.ctx()
   const talking = Boolean(id && isTalking(id))
@@ -77,10 +92,11 @@ export function drawHana(H: Hand, pose: Pose, _mood?: Mood, id?: string) {
   c.save()
   c.translate(0, -pose.lift)
   if (pose.lying) {
-    // Head toward the headboard (up-left on screen), body along the mattress.
-    c.translate(2, 4)
-    c.rotate(lean - 1.05)
-    drawSprite(c, front, flip, pose.sx * 0.64, pose.sy * 0.64, true)
+    // The sleep art is already lying, head to the left. Rotate so her head
+    // faces the headboard (up-left) and keep the same scale as standing.
+    c.translate(2, 2)
+    c.rotate(-0.72 + lean * 0.25)
+    drawSleep(c, flip, pose.sx, pose.sy)
   } else {
     c.rotate(lean)
     drawSprite(c, im, flip, pose.sx, pose.sy)
@@ -88,9 +104,9 @@ export function drawHana(H: Hand, pose: Pose, _mood?: Mood, id?: string) {
   c.restore()
 
   if (pose.lying) {
-    // Light Zs so they read on the dark room; the ink mark would disappear on the wall.
-    const x0 = -26 * (flip ? -1 : 1)
-    const y0 = -24 - pose.lift
+    // Room Zzz only; the sleep art's drawn Zzz were cut out so they do not stack.
+    const x0 = -22 * (flip ? -1 : 1)
+    const y0 = -28 - pose.lift
     for (let n = 0; n < 3; n++) {
       const u = (pose.t * 0.35 + n / 3) % 1
       const zx = x0 + 3 + u * 11

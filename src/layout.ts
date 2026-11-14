@@ -334,7 +334,7 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     theme,
     room,
     items,
-    bed: future ? { i: 1.28, j: 6.4, face: 'se', act: 'think', z: 0.36 } : { i: 7.15, j: 6.55, face: 'se', act: 'think', z: 0.2 },
+    bed: future ? { i: 1.18, j: 6.42, face: 'se', act: 'think', z: 0.38 } : { i: 7.15, j: 6.55, face: 'se', act: 'think', z: 0.2 },
     work: def.work,
     free,
   }

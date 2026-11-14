@@ -208,7 +208,8 @@ function serveStatic(req, res, urlPath) {
     }
   }
   const ext = path.extname(file).toLowerCase()
-  res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-store' : 'public, max-age=3600' })
+  const cache = ext === '.html' ? 'no-store' : ext === '.json' ? 'no-cache, must-revalidate' : 'public, max-age=3600'
+  res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': cache })
   fs.createReadStream(file).pipe(res)
 }
 
