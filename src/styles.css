@@ -78,7 +78,8 @@ textarea {
   cursor: grab;
   touch-action: none;
 }
-#stage.is-bot {
+#stage.is-bot,
+#stage.is-pc {
   cursor: pointer;
 }
 #stage.is-drag {
@@ -356,12 +357,13 @@ textarea {
   display: flex;
   gap: 5px;
   align-items: center;
-  max-width: 300px;
+  max-width: min(520px, 80vw);
 }
 .plaque .status .pill {
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 230px;
+  white-space: nowrap;
+  max-width: min(480px, 72vw);
 }
 .plaque .sched {
   background: var(--note);
@@ -1035,4 +1037,101 @@ textarea {
 .chip .name,
 .btn {
   font-weight: 700;
+}
+
+/* ---------------- activity terminal (opened from the 80s PC) ---------------- */
+.term-win {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(96px, calc(12% + env(safe-area-inset-bottom, 0px)));
+  left: auto;
+  top: auto;
+  z-index: 12;
+  width: min(380px, calc(100% - 32px));
+  background: var(--card);
+  border: var(--line);
+  border-radius: 4px;
+  box-shadow: 6px 8px 0 rgba(43, 38, 34, 0.08);
+  filter: var(--drawn);
+  pointer-events: auto;
+  font-family: var(--ui);
+}
+.term-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px 6px 12px;
+  background: var(--paper-2);
+  border-bottom: var(--line);
+}
+.term-title {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+.term-close {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: var(--line);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 700 16px/1 var(--ui);
+  cursor: pointer;
+}
+.term-close:hover {
+  background: var(--note);
+}
+.term-crt {
+  margin: 10px;
+  padding: 12px 14px 14px;
+  min-height: 160px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 20%, #16301a 0%, #07140a 70%, #040a06 100%);
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  color: #7cff6a;
+  font: 400 13px/1.45 'Courier New', Courier, var(--ui);
+  text-shadow: 0 0 6px rgba(124, 255, 106, 0.25);
+  overflow: auto;
+  max-height: min(360px, 50vh);
+}
+.term-body {
+  white-space: pre-wrap;
+}
+.term-line.term-head {
+  color: #b8ff9a;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.term-line.term-dim,
+.term-ago {
+  color: #5aa052;
+  text-shadow: none;
+}
+.term-line.term-recent {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  white-space: nowrap;
+}
+.term-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.term-ago {
+  flex: none;
+  font-size: 12px;
+}
+.term-cursor {
+  display: inline-block;
+  margin-left: 1px;
+  animation: term-blink 1.1s steps(1) infinite;
+}
+@keyframes term-blink {
+  50% { opacity: 0; }
 }

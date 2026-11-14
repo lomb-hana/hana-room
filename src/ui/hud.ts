@@ -87,6 +87,7 @@ const MOOD_LABEL: Record<Mood, string> = { sleep: 'sleeping', idle: 'just finish
 
 export function statusOf(mood: Mood | null, live: Presence | undefined) {
   if (!mood || !live) return { label: '', detail: '' }
+  if (mood === 'work' && live.activity?.detail) return { label: live.activity.detail, detail: live.activity.detail }
   if (mood === 'work' && live.activity?.tool) return { label: tidyTool(live.activity.tool), detail: live.activity.detail ?? '' }
   if (mood === 'wait') return { label: 'waiting', detail: live.activity?.detail ?? '' }
   if (mood === 'idle') return { label: 'on a break', detail: live.activity?.detail ?? '' }
@@ -206,7 +207,7 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
         el(
           'div',
           { class: 'status' },
-          el('span', { class: 'pill', title: status.detail }, el('span', { class: 'dot' }), status.detail && mood === 'work' ? `${status.label}: ${status.detail}` : status.label),
+          el('span', { class: 'pill', title: status.detail || status.label }, el('span', { class: 'dot' }), status.label),
           sched ? el('span', { class: 'pill sched', title: schedTitle, textContent: sched }) : null,
         ),
       )

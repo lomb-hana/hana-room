@@ -12,10 +12,13 @@ const DIST = path.join(ROOT, 'dist')
 const DATA = process.env.DATA_DIR || path.join(ROOT, 'data')
 const STATUS_FILE = path.join(DATA, 'status.json')
 const CHAT_FILE = path.join(DATA, 'chat.json')
+const ACTIVITY_FILE = path.join(DATA, 'activity.json')
 const PORT = Number(process.env.PORT) || 3000
 const HOST = process.env.HOST || '0.0.0.0'
 const STATES = new Set(['working', 'free-time', 'idle', 'waiting'])
 const MAX_TEXT = 300
+const MAX_LABEL = 60
+const STALE_WORK_MS = 45 * 60 * 1000
 const MAX_NAME = 40
 const MAX_CHAT = 200
 const PER_IP_MS = 20_000
@@ -52,6 +55,87 @@ if (!status || !STATES.has(status.state)) {
 
 let messages = readJson(CHAT_FILE, { messages: [] })
 if (!Array.isArray(messages.messages)) messages = { messages: [] }
+
+function nowIso() {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+}
+
+function sanitizeLabel(value) {
+  let text = cleanText(value ?? '', 400)
+  const patterns = [
+    /[\w.+-]+@[\w.-]+\.\w+/gi,
+    /https?:\/\/\S+/gi,
+    /\bwww\.\S+/gi,
+    /\$\s*\d[\d,]*(?:\.\d+)?/g,
+    /\b(?:\d[ -]*?){13,19}\b/g,
+    /\b(?:\+?1[-.\s]*)?(?:\(?\d{3}\)?[-.\s]*)\d{3}[-.\s]*\d{4}\b/g,
+  ]
+  for (const pat of patterns) text = text.replace(pat, ' ')
+  return text.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL)
+}
+
+function asCurrent(entry) {
+  if (!entry || typeof entry !== 'object') return null
+  const label = typeof entry.label === 'string' ? entry.label : ''
+  const started = typeof entry.started === 'string' ? entry.started : ''
+  if (!label || !started) return null
+  return { label, started }
+}
+
+function asRecent(entry) {
+  const cur = asCurrent(entry)
+  if (!cur) return null
+  const ended = typeof entry.ended === 'string' ? entry.ended : ''
+  if (!ended) return null
+  return { label: cur.label, started: cur.started, ended }
+}
+
+function loadActivity() {
+  const raw = readJson(ACTIVITY_FILE, { current: null, recent: [] })
+  const recent = Array.isArray(raw.recent) ? raw.recent.map(asRecent).filter(Boolean) : []
+  return { current: asCurrent(raw.current), recent }
+}
+
+let activity = loadActivity()
+
+function saveActivity() {
+  writeJson(ACTIVITY_FILE, {
+    current: activity.current,
+    recent: activity.recent.slice(-20),
+  })
+}
+
+function setStatus(state, text) {
+  status = { state, text, updated: nowIso() }
+  writeJson(STATUS_FILE, status)
+}
+
+function finishCurrent(ended) {
+  if (!activity.current) return
+  activity.recent.push({ label: activity.current.label, started: activity.current.started, ended })
+  if (activity.recent.length > 20) activity.recent = activity.recent.slice(-20)
+  activity.current = null
+}
+
+function expireIfStale() {
+  if (status.state !== 'working') return false
+  const then = Date.parse(status.updated || '')
+  if (!Number.isFinite(then) || Date.now() - then < STALE_WORK_MS) return false
+  finishCurrent(nowIso())
+  setStatus('idle', 'Idle')
+  saveActivity()
+  return true
+}
+
+function publicActivity() {
+  expireIfStale()
+  return {
+    current: activity.current,
+    recent: activity.recent.slice(-10),
+  }
+}
+
+setInterval(expireIfStale, 60_000)
 
 const ipLast = new Map()
 const globalTimes = []
@@ -255,6 +339,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/api/status' && method === 'GET') {
+    expireIfStale()
     return send(res, 200, { state: status.state, text: status.text, updated: status.updated })
   }
 
@@ -270,9 +355,55 @@ const server = http.createServer(async (req, res) => {
     const text = cleanText(body.text ?? '', MAX_TEXT)
     if (!STATES.has(state)) return send(res, 400, { error: 'State must be working, free-time, idle, or waiting.' })
     if (!text) return send(res, 400, { error: 'Please include a short status.' })
-    status = { state, text, updated: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') }
-    writeJson(STATUS_FILE, status)
+    setStatus(state, text)
+    if (state !== 'working' && activity.current) {
+      finishCurrent(status.updated)
+      saveActivity()
+    }
     return send(res, 200, status)
+  }
+
+  if (pathname === '/api/activity' && method === 'GET') {
+    return send(res, 200, publicActivity())
+  }
+
+  if (pathname === '/api/activity' && method === 'POST') {
+    if (!authorized(req)) return notAuthorized(res)
+    let body
+    try {
+      body = await readBody(req)
+    } catch (err) {
+      return send(res, err.message === 'too-large' ? 413 : 400, { error: 'Could not read that activity update.' })
+    }
+    const action = body.action
+    if (action !== 'start' && action !== 'done') {
+      return send(res, 400, { error: 'Action must be start or done.' })
+    }
+    expireIfStale()
+    const at = nowIso()
+    if (action === 'start') {
+      const label = sanitizeLabel(body.label)
+      if (!label) return send(res, 400, { error: 'Please include a short, public-safe label.' })
+      finishCurrent(at)
+      activity.current = { label, started: at }
+      setStatus('working', label)
+      saveActivity()
+      return send(res, 200, { ...publicActivity(), status })
+    }
+    const label = activity.current?.label || ''
+    finishCurrent(at)
+    const next = /^me-time/i.test(label) ? 'free-time' : 'idle'
+    setStatus(next, next === 'free-time' ? label : 'Idle')
+    saveActivity()
+    return send(res, 200, { ...publicActivity(), status })
+  }
+
+  if (pathname === '/api/activity' && method === 'DELETE') {
+    if (!authorized(req)) return notAuthorized(res)
+    activity.recent = []
+    saveActivity()
+    expireIfStale()
+    return send(res, 200, { ok: true, ...publicActivity() })
   }
 
   if (pathname === '/api/chat' && method === 'GET') {

@@ -51,7 +51,9 @@ type Sprite = { ratio: number; x0: number; y0: number; cv: HTMLCanvasElement }
 
 export type Anchor = { x: number; y: number; visible: boolean }
 
-export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage: HTMLCanvasElement; onPick: (pick: { botId: string; bot: boolean } | null) => void }) {
+export type PickHit = { botId: string; bot: boolean; item?: string }
+
+export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage: HTMLCanvasElement; onPick: (pick: PickHit | null) => void }) {
   const ctx = stage.getContext('2d')!
   let kinds: Record<string, Kind> = {}
   const rooms = new Map<string, RoomEntry>()
@@ -275,6 +277,16 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       if (d < BODY * SCALE * 0.75 && (!best || d < best.d)) best = { id, d }
     }
     if (best) return { botId: best.id, bot: true }
+    // The 80s PC, before the room floor, so a click opens the activity window.
+    for (const R of [...rooms.values()].reverse()) {
+      for (const it of R.plan.items) {
+        if (it.kind !== CRT_KIND || !kinds[it.kind]) continue
+        const bx = screenBox(kinds[it.kind], it)
+        if (wx >= R.ox + bx.x0 && wx <= R.ox + bx.x1 && wy >= R.oy + bx.y0 && wy <= R.oy + bx.y1) {
+          return { botId: R.plan.botId, bot: false, item: CRT_KIND }
+        }
+      }
+    }
     // Then the room whose floor diamond (or walls above it) is under the pointer.
     for (const R of [...rooms.values()].reverse()) {
       const lx = wx - R.ox
@@ -323,6 +335,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     }
     const hit = pick(...at(e))
     stage.classList.toggle('is-bot', Boolean(hit?.bot))
+    stage.classList.toggle('is-pc', hit?.item === CRT_KIND)
   })
   const end = (e: PointerEvent) => {
     pointers.delete(e.pointerId)

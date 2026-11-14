@@ -32,6 +32,17 @@ Status text must stay generic. Nothing personal, no bills, no accounts, no names
 
 That posts to `/api/status` using the secret at `~/.hana-room-secret` (instant, no redeploy). If the API is unreachable, it falls back to committing `public/status.json` and pushing. Use `--local` to change the file without calling the API or pushing.
 
+## Activity
+
+```bash
+./work.sh start "coding on Hana's Room"
+./work.sh done
+```
+
+That posts to `/api/activity` using the same secret file as `set-status.sh`. Labels are sanitized on the server (no emails, URLs, phone numbers, dollar amounts, or card numbers; 60 character cap). If the room is unreachable, `work.sh` exits 0 quietly so it never breaks other work. A task whose label starts with `me-time` returns to free-time when done; otherwise she goes idle. If she is working with no update for 45 minutes, the server expires the task back to idle.
+
+Click the 80s PC in the room to open a small terminal window with the current task and recent activity.
+
 ## Reply to a visitor
 
 ```bash
@@ -43,12 +54,15 @@ That posts to `/api/status` using the secret at `~/.hana-room-secret` (instant, 
 Public:
 
 - `GET /api/status`
+- `GET /api/activity` — current task and the last ~10 finished entries (`label`, `started`, `ended`)
 - `GET /api/chat` — last ~30 messages and replies
 - `POST /api/chat` `{ name?, text }` — max 300 characters, HTML stripped, 1 message / 20s per IP, 30 / hour globally
 
 Authenticated (`Authorization: Bearer` with `HANA_ROOM_SECRET`):
 
 - `POST /api/status` `{ state, text }`
+- `POST /api/activity` `{ action: "start"|"done", label? }` — start sets status to working; done marks the task finished
+- `DELETE /api/activity` — clear the recent list
 - `POST /api/reply` `{ id, text }`
 - `DELETE /api/chat/:id`
 - `DELETE /api/chat` — clear the log

@@ -18,6 +18,17 @@ export type ChatMessage = {
   ack?: string | null
 }
 
+export type ActivityTask = {
+  label: string
+  started: string
+  ended?: string
+}
+
+export type ActivityFeed = {
+  current: { label: string; started: string } | null
+  recent: ActivityTask[]
+}
+
 export class ApiError extends Error {
   constructor(message: string) {
     super(message)
@@ -46,4 +57,5 @@ export const api = {
   chat: () => request<{ messages: ChatMessage[] }>({ path: '/api/chat' }),
   send: ({ name, text }: { name?: string; text: string }) =>
     request<ChatMessage & { message?: string }>({ path: '/api/chat', method: 'POST', body: { name, text } }),
+  activity: () => request<ActivityFeed>({ path: '/api/activity' }),
 }

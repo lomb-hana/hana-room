@@ -12,7 +12,8 @@ import './styles.css'
 import { createStore } from 'zustand/vanilla'
 import { setDither } from './engine/press.ts'
 import type { Kind } from './engine/kinds.ts'
-import { api, type ChatMessage, type RoomState, type RoomStatus } from './api.ts'
+import { api, type ActivityFeed, type ChatMessage, type RoomState, type RoomStatus } from './api.ts'
+import { createTerminal } from './ui/terminal.ts'
 import { planOffice } from './layout.ts'
 import { createViewer } from './scene/viewer.ts'
 import { createHud, type View } from './ui/hud.ts'
@@ -23,6 +24,7 @@ import type { FeedItem, Live, OfficeSnapshot, ReadState } from './protocol.ts'
 const HANA_ID = 'hana'
 const POLL_STATUS_MS = 20_000
 const POLL_CHAT_MS = 4_000
+const POLL_ACTIVITY_MS = 10_000
 const STALE_MS = 30 * 60 * 1000
 const STATES = new Set<RoomState>(['working', 'free-time', 'idle', 'waiting'])
 const READ_KEY = 'hana-room-read-at'
@@ -42,10 +44,19 @@ function dispatch(...events: OfficeEvent[]) {
 let kinds: Record<string, Kind> = {}
 const sound = createSound()
 
+const terminal = createTerminal({ host: view })
+
 const viewer = createViewer({
   view,
   stage,
-  onPick: (pick) => select(pick?.botId ?? null, { focus: !pick?.bot }),
+  onPick: (pick) => {
+    if (pick?.item === 'crt-pc') {
+      sound.play('tap')
+      terminal.toggle()
+      return
+    }
+    select(pick?.botId ?? null, { focus: !pick?.bot })
+  },
 })
 const hud = createHud({
   layer: document.querySelector('#layer')!,
@@ -71,6 +82,7 @@ viewer.onFrame(() => hud.place())
 
 let status: RoomStatus = { state: 'free-time', text: 'Testing my new room', updated: null }
 let messages: ChatMessage[] = []
+let activity: ActivityFeed = { current: null, recent: [] }
 
 function readAt(): number {
   const n = Number(localStorage.getItem(READ_KEY) || '0')
@@ -245,6 +257,16 @@ async function loadChat() {
   applyOffice()
 }
 
+async function loadActivity() {
+  const result = await api.activity()
+  if (result instanceof Error) {
+    console.warn('activity failed', result.message)
+    return
+  }
+  activity = { current: result.current ?? null, recent: Array.isArray(result.recent) ? result.recent : [] }
+  terminal.update(activity)
+}
+
 async function main() {
   setDither(false)
   // Bust the cache: kinds.json is a stable path, and a 1-hour cache of an older
@@ -254,9 +276,10 @@ async function main() {
   kinds = (await res.json()) as Record<string, Kind>
   viewer.start()
   applyOffice()
-  await Promise.all([loadStatus(), loadChat()])
+  await Promise.all([loadStatus(), loadChat(), loadActivity()])
   window.setInterval(() => void loadStatus(), POLL_STATUS_MS)
   window.setInterval(() => void loadChat(), POLL_CHAT_MS)
+  window.setInterval(() => void loadActivity(), POLL_ACTIVITY_MS)
   window.setInterval(render, 1000)
   window.__office = { store, events: log.events, viewer: viewer.debug, glideTo: viewer.glideTo, select }
 }
