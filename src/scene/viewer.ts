@@ -3,7 +3,9 @@
 // live every frame, sorted in among the things of their room.
 
 import { iso, mkHand, lerp, streamOf, clamp } from '../engine/press.ts'
-import { WALL_H, roomBounds, roomOrigin } from '../engine/world.ts'
+import { WALL_H, roomBounds, roomOrigin, windowPane } from '../engine/world.ts'
+import { dimOf, drawRain, skyKey, skyNow, type SkyState } from '../engine/sky.ts'
+import { drawBoardPins, type BoardData } from '../engine/board-draw.ts'
 import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
 import { CRT_KIND, drawCrtScreen } from '../engine/crt.ts'
@@ -47,7 +49,7 @@ type RoomEntry = {
   oy: number
   b: ReturnType<typeof roomBounds>
   ver: string
-  base: { ratio: number; cv: HTMLCanvasElement } | null
+  base: { ratio: number; sky: string; cv: HTMLCanvasElement } | null
 }
 type Sprite = { ratio: number; x0: number; y0: number; cv: HTMLCanvasElement }
 
@@ -58,6 +60,9 @@ export type PickHit = { botId: string; bot: boolean; item?: string }
 export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage: HTMLCanvasElement; onPick: (pick: PickHit | null) => void }) {
   let musicOn = () => false
   let party = 0
+  let sky: SkyState = skyNow()
+  let board: BoardData | null = null
+  const CLICKABLE = new Set(['crt-pc', 'record-player', 'corkboard', 'guestbook'])
   const ctx = stage.getContext('2d')!
   let kinds: Record<string, Kind> = {}
   const rooms = new Map<string, RoomEntry>()
@@ -98,11 +103,12 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
 
   function baseOf(R: RoomEntry) {
     const ratio = ratioNow()
-    if (!R.base || R.base.ratio !== ratio) {
+    const sk = skyKey(sky)
+    if (!R.base || R.base.ratio !== ratio || R.base.sky !== sk) {
       const b = R.b
-      R.base = { ratio, cv: printed(b.x1 - b.x0, b.y1 - b.y0, ratio, b.x0, b.y0, (c) => drawBase(mkHand(c, { seed: 1 }), R.plan.room, R.plan.items, kinds, {})) }
+      R.base = { ratio, sky: sk, cv: printed(b.x1 - b.x0, b.y1 - b.y0, ratio, b.x0, b.y0, (c) => drawBase(mkHand(c, { seed: 1 }), R.plan.room, R.plan.items, kinds, {}, { sky })) }
     }
-    return R.base
+    return R.base!
   }
 
   function spriteOf(it: Item): Sprite {
@@ -228,6 +234,15 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       ctx.restore()
       const base = baseOf(R)
       blit(base.cv, base.ratio, R.ox + R.b.x0, R.oy + R.b.y0)
+      ctx.save()
+      ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
+      const rainH = mkHand(ctx, { seed: 8, fine: true })
+      for (const win of R.plan.room.windows || []) {
+        drawRain(rainH, windowPane(rainH, win.side, win.pos, win.z ?? 1, win.w ?? 1.6, win.h ?? 1.2), t, sky, prefersReducedMotion())
+      }
+      const boardItem = R.plan.items.find((it) => it.kind === 'corkboard')
+      if (board && boardItem && kinds.corkboard) drawBoardPins(rainH, boardItem, kinds.corkboard, board)
+      ctx.restore()
       const things: Array<{ key: number; it?: Item; actor?: Actor }> = []
       for (const it of R.plan.items) {
         const k = kinds[it.kind]
@@ -268,6 +283,44 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
         drawParty(mkHand(ctx, { seed: 7, fine: true }), t, party, { i: dance.i, j: dance.j }, prefersReducedMotion())
         ctx.restore()
       }
+      const dim = dimOf(sky.period, sky.weather)
+      if (dim) {
+        ctx.save()
+        ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
+        const H = mkHand(ctx, { seed: 1 })
+        const sil = [
+          ...H.tile(0, 0, 9, 9, 0),
+          H.p(9, 0, WALL_H),
+          H.p(0, 0, WALL_H),
+          H.p(0, 9, WALL_H),
+        ]
+        // Floor diamond plus the two back walls.
+        const floor = H.tile(0, 0, 9, 9, 0)
+        const nw = [H.p(0, 0, 0), H.p(0, 9, 0), H.p(0, 9, WALL_H), H.p(0, 0, WALL_H)]
+        const ne = [H.p(0, 0, 0), H.p(9, 0, 0), H.p(9, 0, WALL_H), H.p(0, 0, WALL_H)]
+        const c = ctx
+        c.globalAlpha = dim.alpha
+        c.fillStyle = dim.fill
+        for (const P of [floor, nw, ne]) {
+          c.beginPath()
+          P.forEach((pt, n) => (n ? c.lineTo(pt[0], pt[1]) : c.moveTo(pt[0], pt[1])))
+          c.closePath()
+          c.fill()
+        }
+        ctx.restore()
+        void sil
+      }
+      if (sky.period === 'night' || sky.period === 'dusk') {
+        const lamp = R.plan.items.find((it) => it.kind === 'table-lamp')
+        if (lamp) {
+          ctx.save()
+          ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
+          const H = mkHand(ctx, { seed: 4, fine: true })
+          const p = H.p(lamp.at.i + 0.2, lamp.at.j + 0.2, (lamp.at.z || 0) + 0.5)
+          H.glow(p[0], p[1], sky.period === 'night' ? 54 : 34, sky.period === 'night' ? 40 : 24, 'sun', sky.period === 'night' ? 0.55 : 0.32)
+          ctx.restore()
+        }
+      }
     }
   }
 
@@ -298,7 +351,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     let prop: { botId: string; item: string; area: number } | null = null
     for (const R of [...rooms.values()].reverse()) {
       for (const it of R.plan.items) {
-        if ((it.kind !== CRT_KIND && it.kind !== RECORD_KIND) || !kinds[it.kind]) continue
+        if (!CLICKABLE.has(it.kind) || !kinds[it.kind]) continue
         const bx = screenBox(kinds[it.kind], it)
         if (wx >= R.ox + bx.x0 && wx <= R.ox + bx.x1 && wy >= R.oy + bx.y0 && wy <= R.oy + bx.y1) {
           const area = (bx.x1 - bx.x0) * (bx.y1 - bx.y0)
@@ -357,6 +410,8 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     stage.classList.toggle('is-bot', Boolean(hit?.bot))
     stage.classList.toggle('is-pc', hit?.item === CRT_KIND)
     stage.classList.toggle('is-player', hit?.item === RECORD_KIND)
+    stage.classList.toggle('is-board', hit?.item === 'corkboard')
+    stage.classList.toggle('is-book', hit?.item === 'guestbook')
   })
   const end = (e: PointerEvent) => {
     pointers.delete(e.pointerId)
@@ -481,6 +536,16 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     },
     setMusic(fn: () => boolean) {
       musicOn = fn
+    },
+    setSky(next: SkyState) {
+      const prev = skyKey(sky)
+      sky = next
+      if (skyKey(sky) !== prev) {
+        for (const R of rooms.values()) R.base = null
+      }
+    },
+    setBoard(next: BoardData | null) {
+      board = next
     },
     setLive(botId: string, live: Presence) {
       const a = actors.get(botId)

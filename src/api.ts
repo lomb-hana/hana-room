@@ -29,6 +29,35 @@ export type ActivityFeed = {
   recent: ActivityTask[]
 }
 
+export type BoardData = {
+  hotTake: string
+  date: string
+  notes: string[]
+}
+
+export type GuestEntry = {
+  id: string
+  name: string
+  note: string
+  ts: string
+}
+
+export type GuestbookFeed = {
+  entries: GuestEntry[]
+  persist?: string
+}
+
+export type SkyPayload = {
+  period: 'dawn' | 'day' | 'dusk' | 'night'
+  hour: number
+  weather: 'clear' | 'cloudy' | 'rain'
+  cloud: number
+  precip: number
+  tempC: number | null
+  sun: number
+  updated: string | null
+}
+
 export class ApiError extends Error {
   constructor(message: string) {
     super(message)
@@ -58,4 +87,17 @@ export const api = {
   send: ({ name, text }: { name?: string; text: string }) =>
     request<ChatMessage & { message?: string }>({ path: '/api/chat', method: 'POST', body: { name, text } }),
   activity: () => request<ActivityFeed>({ path: '/api/activity' }),
+  sky: () => request<SkyPayload>({ path: '/api/sky' }),
+  board: async () => {
+    try {
+      const response = await fetch('/board.json', { credentials: 'same-origin', signal: AbortSignal.timeout(TIMEOUT_MS) })
+      if (!response.ok) return new ApiError('Could not load the corkboard.')
+      return (await response.json()) as BoardData
+    } catch {
+      return new ApiError('Could not load the corkboard.')
+    }
+  },
+  guestbook: () => request<GuestbookFeed>({ path: '/api/guestbook' }),
+  signGuestbook: ({ name, note }: { name: string; note: string }) =>
+    request<GuestEntry>({ path: '/api/guestbook', method: 'POST', body: { name, note } }),
 }

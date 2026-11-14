@@ -3,6 +3,7 @@
 
 import { streamOf, type Hand, type Rng } from './press.ts'
 import { EDGES, drawBulb, drawShell, type Edges } from './world.ts'
+import type { SkyState } from './sky.ts'
 import { drawThing, type Kind } from './kinds.ts'
 import type { Item, Room } from '../types.ts'
 
@@ -16,7 +17,7 @@ export function drawBase(
   items: Item[],
   kinds: Record<string, Kind>,
   images: Record<string, HTMLImageElement | null>,
-  o: { edges?: Edges } = {},
+  o: { edges?: Edges; sky?: SkyState } = {},
 ) {
   const R: Rng = streamOf('room', rm.id)
   const E = o.edges ?? EDGES
@@ -24,10 +25,12 @@ export function drawBase(
   const hung = items.filter((it) => kindOf(kinds, it) && layerOf(kindOf(kinds, it)!) === 'wall')
   drawShell(H, R, rm, {
     edges: E,
+    sky: o.sky,
     onFloor: () => {
       for (const it of flat) drawThing(H, streamOf('item', it.id), kindOf(kinds, it)!, it, images)
     },
   })
   for (const it of hung) drawThing(H, streamOf('item', it.id), kindOf(kinds, it)!, it, images)
-  drawBulb(H, R, rm, true, E)
+  const lit = !o.sky || o.sky.period !== 'day'
+  drawBulb(H, R, rm, lit, E)
 }

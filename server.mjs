@@ -13,6 +13,11 @@ const DATA = process.env.DATA_DIR || path.join(ROOT, 'data')
 const STATUS_FILE = path.join(DATA, 'status.json')
 const CHAT_FILE = path.join(DATA, 'chat.json')
 const ACTIVITY_FILE = path.join(DATA, 'activity.json')
+const GUESTBOOK_FILE = process.env.GUESTBOOK_FILE || path.join(DATA, 'guestbook.json')
+const MAX_GUEST_NAME = 24
+const MAX_GUEST_NOTE = 200
+const MAX_GUEST = 200
+const GUEST_IP_MS = 10 * 60 * 1000
 const PORT = Number(process.env.PORT) || 3000
 const HOST = process.env.HOST || '0.0.0.0'
 const STATES = new Set(['working', 'free-time', 'idle', 'waiting'])
@@ -360,6 +365,129 @@ function pruneRate(now) {
   for (const [ip, at] of ipLast) if (now - at > HOUR_MS) ipLast.delete(ip)
 }
 
+
+const GUEST_BLOCK = /\b(nigg(?:er|a)s?|fag+ots?|kikes?|spics?|retard(?:ed|s)?|cunts?|rape[sd]?|rapist|suicid(?:e|al)|kill\s+yourself|kys)\b/i
+const GUEST_URL = /https?:\/\/\S+|\bwww\.\S+|\b[\w.-]+\.(?:com|net|org|io|co|gg|xyz|info|biz)\b/gi
+
+const guestIpLast = new Map()
+let guestbook = loadGuestbook()
+let skyCache = { at: 0, data: null }
+
+function guestbookPersistHint() {
+  if (process.env.GUESTBOOK_FILE) {
+    return 'Entries are stored on the configured guestbook file.'
+  }
+  // Render's free web service has no persistent disk. DATA_DIR survives
+  // process restarts on the current instance but is wiped on a new deploy.
+  return 'Entries are kept on this instance (up to 200) and will reset when the service redeploys. The free plan has no persistent disk.'
+}
+
+function loadGuestbook() {
+  const raw = readJson(GUESTBOOK_FILE, { entries: [] })
+  const entries = Array.isArray(raw.entries) ? raw.entries.map(asGuest).filter(Boolean) : []
+  return { entries: entries.slice(-MAX_GUEST) }
+}
+
+function asGuest(entry) {
+  if (!entry || typeof entry !== 'object') return null
+  const id = typeof entry.id === 'string' ? entry.id : ''
+  const name = typeof entry.name === 'string' ? entry.name : ''
+  const note = typeof entry.note === 'string' ? entry.note : ''
+  const ts = typeof entry.ts === 'string' ? entry.ts : ''
+  if (!id || !name || !note || !ts) return null
+  return { id, name, note, ts }
+}
+
+function saveGuestbook() {
+  writeJson(GUESTBOOK_FILE, { entries: guestbook.entries.slice(-MAX_GUEST) })
+}
+
+function publicGuestbook() {
+  return {
+    entries: guestbook.entries.slice(-MAX_GUEST),
+    persist: guestbookPersistHint(),
+  }
+}
+
+function guestClean(value, max) {
+  let text = cleanText(value ?? '', max * 2)
+  text = text.replace(GUEST_URL, ' ')
+  return text.replace(/\s+/g, ' ').trim().slice(0, max)
+}
+
+function guestBlocked(text) {
+  return GUEST_BLOCK.test(text)
+}
+
+async function fetchSky() {
+  const now = Date.now()
+  if (skyCache.data && now - skyCache.at < 15 * 60 * 1000) return skyCache.data
+  const url =
+    'https://api.open-meteo.com/v1/forecast?latitude=29.76&longitude=-95.37&current=temperature_2m,weather_code,precipitation,cloud_cover,rain,showers&timezone=America%2FChicago'
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) throw new Error('meteo')
+    const json = await res.json()
+    const cur = json.current || {}
+    const code = Number(cur.weather_code ?? 0)
+    const precip = Number(cur.precipitation ?? cur.rain ?? cur.showers ?? 0)
+    const cloud = Math.min(1, Math.max(0, Number(cur.cloud_cover ?? 0) / 100))
+    let weather = 'clear'
+    if (precip > 0.1 || (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95 && code <= 99)) weather = 'rain'
+    else if (cloud >= 0.45 || (code >= 1 && code <= 3) || (code >= 45 && code <= 48)) weather = 'cloudy'
+    const frac = houstonHour()
+    const period = periodOfHour(frac)
+    const sunBase = period === 'day' ? 1 : period === 'dawn' ? 0.45 : period === 'dusk' ? 0.35 : 0
+    const data = {
+      period,
+      hour: frac,
+      weather,
+      cloud,
+      precip,
+      tempC: typeof cur.temperature_2m === 'number' ? cur.temperature_2m : null,
+      sun: sunBase * (1 - Math.min(0.75, cloud) * 0.7),
+      updated: typeof cur.time === 'string' ? cur.time : nowIso(),
+    }
+    skyCache = { at: now, data }
+    return data
+  } catch {
+    const frac = houstonHour()
+    const period = periodOfHour(frac)
+    const fallback = skyCache.data || {
+      period,
+      hour: frac,
+      weather: 'clear',
+      cloud: 0.1,
+      precip: 0,
+      tempC: null,
+      sun: period === 'day' ? 1 : period === 'night' ? 0 : 0.4,
+      updated: null,
+    }
+    fallback.period = period
+    fallback.hour = frac
+    return fallback
+  }
+}
+
+function houstonHour() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    hour: 'numeric',
+    minute: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(new Date())
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0)
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0)
+  return hour + minute / 60
+}
+
+function periodOfHour(frac) {
+  if (frac >= 6 && frac < 7.5) return 'dawn'
+  if (frac >= 7.5 && frac < 17.25) return 'day'
+  if (frac >= 17.25 && frac < 19) return 'dusk'
+  return 'night'
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
   const method = req.method || 'GET'
@@ -518,6 +646,62 @@ const server = http.createServer(async (req, res) => {
     messages = { messages: [] }
     writeJson(CHAT_FILE, messages)
     return send(res, 200, { ok: true })
+  }
+
+
+  if (pathname === '/api/sky' && method === 'GET') {
+    const data = await fetchSky()
+    return send(res, 200, data)
+  }
+
+  if (pathname === '/api/guestbook' && method === 'GET') {
+    return send(res, 200, publicGuestbook())
+  }
+
+  if (pathname === '/api/guestbook' && method === 'POST') {
+    let body
+    try {
+      body = await readBody(req)
+    } catch (err) {
+      return send(res, err.message === 'too-large' ? 413 : 400, { error: 'Could not read that note.' })
+    }
+    const name = guestClean(body.name ?? '', MAX_GUEST_NAME)
+    const note = guestClean(body.note ?? '', MAX_GUEST_NOTE)
+    if (!name) return send(res, 400, { error: 'Please leave a name (up to 24 characters).' })
+    if (!note) return send(res, 400, { error: 'Please write a short note (up to 200 characters).' })
+    if (guestBlocked(`${name} ${note}`)) {
+      return send(res, 400, { error: 'That note could not be posted.' })
+    }
+    const now = Date.now()
+    const ip = clientIp(req) || 'unknown'
+    for (const [k, at] of guestIpLast) if (now - at > GUEST_IP_MS * 2) guestIpLast.delete(k)
+    const last = guestIpLast.get(ip) || 0
+    if (now - last < GUEST_IP_MS) {
+      return send(res, 429, { error: 'Easy, one guestbook note every 10 minutes.' })
+    }
+    const entry = {
+      id: crypto.randomUUID(),
+      name,
+      note,
+      ts: new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z'),
+    }
+    guestbook.entries.push(entry)
+    if (guestbook.entries.length > MAX_GUEST) guestbook.entries = guestbook.entries.slice(-MAX_GUEST)
+    saveGuestbook()
+    guestIpLast.set(ip, now)
+    // Guestbook entries are data only. They are never forwarded to Hana or the chat webhook.
+    return send(res, 200, entry)
+  }
+
+  if (pathname.startsWith('/api/guestbook/') && method === 'DELETE') {
+    if (!authorized(req)) return notAuthorized(res)
+    const id = decodeURIComponent(pathname.slice('/api/guestbook/'.length)).trim()
+    if (!id) return send(res, 400, { error: 'Missing entry id.' })
+    const before = guestbook.entries.length
+    guestbook.entries = guestbook.entries.filter((e) => e.id !== id)
+    if (guestbook.entries.length === before) return send(res, 404, { error: 'No guestbook entry with that id.' })
+    saveGuestbook()
+    return send(res, 200, { ok: true, id })
   }
 
   if (pathname.startsWith('/api/')) {

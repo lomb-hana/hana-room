@@ -16,13 +16,13 @@ import {
   type Rng,
   type Vec,
   rd,
-  blob,
   centroid,
   curve,
   ell,
   streamOf,
 } from './press.ts'
 import type { Color, Item, Room, Side, Walls } from '../types.ts'
+import { drawSkyView, type SkyState } from './sky.ts'
 
 export const ROOM = 9 // tiles per side
 export const PITCH = 13 // each bot's room is its own box, with a walkway round it
@@ -162,6 +162,24 @@ export function wallPt(H: Hand, side: Side, pos: number, z: number, off = 0): Ve
 }
 export function wallRect(H: Hand, side: Side, p0: number, p1: number, z0: number, z1: number, off = 0.02): Vec[] {
   return [wallPt(H, side, p0, z0, off), wallPt(H, side, p1, z0, off), wallPt(H, side, p1, z1, off), wallPt(H, side, p0, z1, off)]
+}
+// Arched window opening on a back wall, in room pixels.
+export function windowPane(H: Hand, side: Side, pos: number, z: number, w: number, h: number, off = 0.03): Vec[] {
+  const arch = h * 0.38
+  const body = z + h - arch
+  const left = pos - w / 2
+  const right = pos + w / 2
+  const pts: Vec[] = [wallPt(H, side, left, z, off), wallPt(H, side, right, z, off), wallPt(H, side, right, body, off)]
+  const steps = 10
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps
+    const a = t * Math.PI
+    const p = right - (w * (1 - Math.cos(a))) / 2
+    const zz = body + Math.sin(a) * arch
+    pts.push(wallPt(H, side, p, zz, off))
+  }
+  pts.push(wallPt(H, side, left, body, off))
+  return pts
 }
 export function backWalls(H: Hand, R: Rng, rm: Room, o: Walls = {}, sides: Side[] = ['nw', 'ne']) {
   const w = rm.w
@@ -308,37 +326,36 @@ export function boxAt(
 }
 
 // ---------------- on the walls ----------------
-export function windowOn(H: Hand, R: Rng, side: Side, pos: number, z: number, w: number, h: number) {
-  const P = wallRect(H, side, pos - w / 2, pos + w / 2, z, z + h, 0.03)
-  H.fill(P, 'blue', 0.16)
-  H.tint(P, 'teal', 0.12)
-  H.clip(P, () => {
-    const c = centroid(P)
-    const RR = streamOf('window', side, pos)
-    cloud(H, RR, c[0] + rd(RR, -10, 10), c[1] - h * 6, 9 + w * 3, 'paper', 1)
-    const t = wallPt(H, side, pos + w * 0.3, z, 0.03)
-    H.fill(blob(R, t[0], t[1] - 2, 16, 10, 0), 'teal', 0.65)
-  })
-  H.line(R, [wallPt(H, side, pos, z, 0.04), wallPt(H, side, pos, z + h, 0.04)], 'paper', 2.4, { amp: 0.1 })
-  H.line(R, [wallPt(H, side, pos - w / 2, z + h * 0.55, 0.04), wallPt(H, side, pos + w / 2, z + h * 0.55, 0.04)], 'paper', 2.4, { amp: 0.1 })
-  H.outline(R, P, 'blue', 1.4, { tone: 0.9, amp: 0.2 })
+export function windowOn(H: Hand, R: Rng, side: Side, pos: number, z: number, w: number, h: number, sky?: SkyState) {
+  const frame = windowPane(H, side, pos, z - 0.04, w + 0.22, h + 0.12, 0.02)
+  H.fill(frame, 'coral', 0.22)
+  H.tint(frame, 'sun', 0.2)
+  const P = windowPane(H, side, pos, z, w, h, 0.04)
+  drawSkyView(H, streamOf('window', side, pos), P, sky ?? { period: 'day', hour: 12, weather: 'clear', cloud: 0.1, precip: 0, tempC: null, sun: 1, updated: null })
+  // A single cream mullion up the middle of the rectangular body, not a hard cross.
+  const midZ1 = z + h * 0.58
+  H.line(R, [wallPt(H, side, pos, z, 0.05), wallPt(H, side, pos, midZ1, 0.05)], 'paper', 2.1, { amp: 0.08, tone: 0.95 })
+  H.outline(R, P, 'blue', 1.2, { tone: 0.9, amp: 0.15 })
+  H.outline(R, frame, 'blue', 1.5, { tone: 0.9, amp: 0.18 })
   const sill = [
-    wallPt(H, side, pos - w / 2 - 0.1, z, 0.04),
-    wallPt(H, side, pos + w / 2 + 0.1, z, 0.04),
-    wallPt(H, side, pos + w / 2 + 0.1, z, 0.24),
-    wallPt(H, side, pos - w / 2 - 0.1, z, 0.24),
+    wallPt(H, side, pos - w / 2 - 0.16, z, 0.04),
+    wallPt(H, side, pos + w / 2 + 0.16, z, 0.04),
+    wallPt(H, side, pos + w / 2 + 0.16, z, 0.22),
+    wallPt(H, side, pos - w / 2 - 0.16, z, 0.22),
   ]
   H.fill(sill, 'paper', 1)
+  H.tint(sill, 'coral', 0.08)
   H.outline(R, sill, 'blue', 0.9, { tone: 0.8 })
   return P
 }
 // The sun through a window: a pale patch on the floor, thrown down-right.
-export function sunPatch(H: Hand, _R: Rng, _rm: Room, side: Side, pos: number, w: number) {
+export function sunPatch(H: Hand, _R: Rng, _rm: Room, side: Side, pos: number, w: number, tone = 0.22) {
+  if (tone <= 0.02) return null
   const P =
     side === 'ne'
       ? [H.p(pos - w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 1.6, 3.2, 0), H.p(pos - w / 2 + 1.6, 3.2, 0)]
       : [H.p(0.15, pos - w / 2 + 0.2, 0), H.p(0.15, pos + w / 2 + 0.2, 0), H.p(3.4, pos + w / 2 + 1.2, 0), H.p(3.4, pos - w / 2 + 1.2, 0)]
-  H.tint(P, 'sun', 0.22)
+  H.tint(P, 'sun', tone)
   return P
 }
 export function doorOn(H: Hand, R: Rng, side: Side, pos: number, w = 1.1, h = 2.3) {
@@ -421,7 +438,7 @@ export function twinkle(H: Hand, _R: Rng, x: number, y: number, s: number, ink: 
 }
 
 // ---------------- the room ----------------
-export function drawShell(H: Hand, R: Rng, rm: Room, o: { edges?: Edges; onFloor?: () => void } = {}) {
+export function drawShell(H: Hand, R: Rng, rm: Room, o: { edges?: Edges; onFloor?: () => void; sky?: SkyState } = {}) {
   const E = o.edges || EDGES
   const full = (['nw', 'ne'] as Side[]).filter((sd) => E[sd] === 'wall')
   const on = (x?: { side: Side } | null) => !!(x && full.includes(x.side))
@@ -431,7 +448,7 @@ export function drawShell(H: Hand, R: Rng, rm: Room, o: { edges?: Edges; onFloor
   const wall = rm.walls || {}
   if (full.length) {
     backWalls(H, R, rm, wall, full)
-    for (const win of (rm.windows || []).filter(on)) windowOn(H, R, win.side, win.pos, win.z ?? 1.1, win.w ?? 2, win.h ?? 1.4)
+    for (const win of (rm.windows || []).filter(on)) windowOn(H, R, win.side, win.pos, win.z ?? 1.1, win.w ?? 2, win.h ?? 1.4, o.sky)
     if (on(rm.door)) doorOn(H, R, rm.door!.side, rm.door!.pos)
     for (const ot of (rm.outlets || []).filter(on)) outletOn(H, R, ot.side, ot.pos)
     wallTrim(H, R, rm, wall, full)
@@ -440,7 +457,8 @@ export function drawShell(H: Hand, R: Rng, rm: Room, o: { edges?: Edges; onFloor
     if (E[sd] === 'low') lowWall(H, R, rm, sd, (E.paint && E.paint[sd]) || wall)
     if (E[sd] === 'fence') fence(H, R, rm, sd)
   }
-  for (const win of (rm.windows || []).filter(on)) sunPatch(H, R, rm, win.side, win.pos, win.w ?? 2)
+  const sun = o.sky ? 0.22 * o.sky.sun : 0.22
+  for (const win of (rm.windows || []).filter(on)) sunPatch(H, R, rm, win.side, win.pos, win.w ?? 2, sun)
 }
 export function drawBulb(H: Hand, R: Rng, rm: Room, lit: boolean, E: Edges = EDGES) {
   if (rm.bulb && E[rm.bulb.side] === 'wall') bulbOn(H, R, rm.bulb.side, rm.bulb.pos, lit)

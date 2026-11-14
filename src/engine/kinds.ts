@@ -75,7 +75,7 @@ export const SWATCH: Record<string, Color> = {
 export const SHAPES = ['box', 'legs', 'cyl', 'cone', 'ball', 'pole', 'panel', 'plant', 'books', 'flat', 'glow', 'lines', 'dot', 'hands'] as const
 export type ShapeName = (typeof SHAPES)[number]
 export const PLANTS = ['leafy', 'tall', 'round', 'spiky', 'cactus', 'trailing', 'palm', 'tree', 'flowers']
-export const PATTERNS = ['plain', 'stripes', 'border', 'dots', 'check', 'fringe', 'round', 'water']
+export const PATTERNS = ['plain', 'stripes', 'border', 'dots', 'check', 'fringe', 'round', 'water', 'blossom']
 
 export const shapeType = (s: ShapeFields): ShapeName | undefined => SHAPES.find((k) => Array.isArray(s[k]))
 
@@ -271,7 +271,7 @@ const PRIM: Record<string, Prim> = {
     const col2 = c.col(s.color2 || 'cream')
     const pat = s.pattern || 'plain'
     let P = H.tile(i, j, wi, dj, zz)
-    if (pat === 'round') {
+    if (pat === 'round' || pat === 'blossom') {
       const ci = i + wi / 2
       const cj = j + dj / 2
       P = []
@@ -314,6 +314,27 @@ const PRIM: Record<string, Prim> = {
             const [x, y] = H.p(...c.pl.W(u + a, v + b, z))
             H.dot(x, y, 2.2, col2[0], Math.max(0.6, col2[1]))
           }
+      if (pat === 'blossom') {
+        const ci = i + wi / 2
+        const cj = j + dj / 2
+        const inner: [number, number][] = []
+        for (let k = 0; k < 44; k++) {
+          const t = (k / 44) * TAU
+          inner.push(H.p(ci + (Math.cos(t) * wi) / 2 * 0.72, cj + (Math.sin(t) * dj) / 2 * 0.72, zz))
+        }
+        H.outline(R, inner, col2[0], 2.4, { tone: Math.max(0.8, col2[1]), amp: 0.1 })
+        const ring = [
+          [0, 0.55],
+          [0.45, 0.2],
+          [-0.45, 0.2],
+          [0.28, -0.4],
+          [-0.28, -0.4],
+        ]
+        for (const [dx, dy] of ring) {
+          const [x, y] = H.p(ci + dx * (wi / 2) * 0.55, cj + dy * (dj / 2) * 0.55, zz)
+          H.dot(x, y, 2.6, col2[0], Math.max(0.7, col2[1]))
+        }
+      }
       if (pat === 'water') {
         // The far walls of the pool, in shade, then ripples on the water.
         H.tint(

@@ -55,7 +55,7 @@ export function themeOf(snapshot: BotSnapshot): Theme {
   return 'den'
 }
 
-const desk = (at: At, top = 'oak'): Put => ({ kind: 'desk', at, colors: { top, legs: 'black', drawers: 'white' } })
+const desk = (at: At, top = 'oak'): Put => ({ kind: 'desk', at, colors: { top, legs: 'oak', drawers: 'cream', knobs: 'pink' } })
 const on = (kind: string, at: At, colors?: Record<string, string>): Put => ({ kind, at, colors })
 
 function themeDef(theme: Theme, R: () => number): ThemeDef {
@@ -220,20 +220,21 @@ function themeDef(theme: Theme, R: () => number): ThemeDef {
       ],
     }
   return {
-    walls: { ink: 'sun', tone: 0.22, style: 'plain' },
-    floor: { style: 'planks', ink: 'sun', tone: 0.34 },
-    rug: accent,
+    walls: { ink: 'sun', tone: 0.16, style: 'plain', ink2: 'coral', tone2: 0.06 },
+    floor: { style: 'planks', ink: 'sun', tone: 0.3 },
+    rug: 'blush',
     things: [
-      desk({ i: 0.6, j: 0, face: 'ne' }),
+      desk({ i: 0.6, j: 0, face: 'ne' }, 'oak'),
       on('crt-pc', { i: 0.72, j: 0.08, z: 0.86, face: 'ne' }),
       on('table-lamp', { i: 2.12, j: 0.32, z: 0.86, face: 'ne' }),
       { kind: 'bookshelf', at: { i: 0, j: 3.3, face: 'nw' } },
       { kind: 'dresser', at: { i: 3.2, j: 0, face: 'ne' } },
       on('record-player', { i: 3.4, j: 0.05, z: 1, face: 'ne' }),
-      { kind: 'armchair', at: { i: 3.2, j: 6.3, face: 'ne' }, colors: { body: accent, legs: 'walnut' } },
-      // Small retro TV in front of the chair, screen facing the sitter, off the rug.
-      { kind: 'retro-tv', at: { i: 3.34, j: 7.64, face: 'sw' } },
+      { kind: 'armchair', at: { i: 3.2, j: 6.3, face: 'ne' }, colors: { body: 'pink', legs: 'oak', cushion: 'cream' } },
+      // Comfortable viewing distance in front of the chair, screen facing the sitter, off the rug.
+      { kind: 'retro-tv', at: { i: 3.34, j: 8.40, face: 'sw' } },
       { kind: 'bench-plant', at: { i: 0, j: 5.2, face: 'nw' } },
+      { kind: 'guestbook', at: { i: 0.25, j: 6.18, face: 'nw' } },
     ],
     work: [
       { i: 1.32, j: 1.5, face: 'ne', act: 'type' },
@@ -242,9 +243,6 @@ function themeDef(theme: Theme, R: () => number): ThemeDef {
     ],
   }
 }
-
-const NOTE_COLORS: Record<string, string> = { todo: 'yellow', doing: 'pink', done: 'mint', cancelled: 'silver' }
-const MAX_NOTES = 8
 
 export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [number, number]; kinds: Record<string, Kind> }): RoomPlan {
   const { bot } = snapshot
@@ -263,27 +261,27 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     windows: [{ side: 'nw', pos: 7.4, w: 1.6, h: 1.2, z: 1.0 }],
     bulb: { side: 'ne', pos: 7.6 },
   }
+  const denRug = theme === 'den'
   const puts: Put[] = [
-    { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: def.rug, pattern: 'cream' } },
+    denRug
+      ? { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: 'pink', pattern: 'cream' }, options: { pattern: 'blossom' } }
+      : { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: def.rug, pattern: 'cream' } },
     ...def.things,
-    { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: pk(R, ['terracotta', 'teal', 'mustard', 'plum', 'coral']), blanket: pk(R, ['sky', 'pink', 'mint', 'yellow']) } },
+    denRug
+      ? { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: 'oak', cushion: 'blush', pillow: 'cream', blanket: 'pink' } }
+      : { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: pk(R, ['terracotta', 'teal', 'mustard', 'plum', 'coral']), blanket: pk(R, ['sky', 'pink', 'mint', 'yellow']) } },
   ]
 
-  // The wall clock points at the next scheduled run; the calendar says "this bot has a schedule".
-  const next = snapshot.automations.filter((a) => a.enabled && a.nextRunAt).sort((a, b) => a.nextRunAt! - b.nextRunAt!)[0]
-  const when = next?.nextRunAt ? new Date(next.nextRunAt) : null
-  puts.push({ kind: 'clock', at: { i: 0, j: 1.1, z: 1.75, face: 'nw' }, options: when ? { hour: when.getHours(), minute: when.getMinutes() } : {} })
+  // The wall clock shows Houston time. A calendar still hangs if this bot has a schedule.
+  const nowParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date())
+  const hour = Number(nowParts.find((p) => p.type === 'hour')?.value ?? 10)
+  const minute = Number(nowParts.find((p) => p.type === 'minute')?.value ?? 10)
+  puts.push({ kind: 'clock', at: { i: 0, j: 1.1, z: 1.75, face: 'nw' }, options: { hour, minute } })
   if (snapshot.automations.length) puts.push({ kind: 'calendar', at: { i: 0, j: 2.2, z: 1.3, face: 'nw' } })
   if (snapshot.automations.length) puts.push(on('alarm-clock', { i: 6.9, j: 5.75, z: 0, face: 'ne' }))
 
-  // The todo list: one sticky note per item on a corkboard.
-  const board = { i: 6.4, z: 1.15 }
-  puts.push({ kind: 'corkboard', at: { i: board.i, j: 0, z: board.z, face: 'ne' } })
-  snapshot.todos.slice(-MAX_NOTES).forEach((todo, n) => {
-    const col = n % 4
-    const row = Math.floor(n / 4)
-    puts.push({ kind: 'sticky-note', at: { i: board.i + 0.14 + col * 0.37, j: 0, z: board.z + 0.6 - row * 0.42, face: 'ne' }, colors: { note: NOTE_COLORS[todo.status] } })
-  })
+  // Corkboard: live notes are drawn from public/board.json, not from a todo list.
+  puts.push({ kind: 'corkboard', at: { i: 6.4, j: 0, z: 1.15, face: 'ne' } })
 
   const items: Item[] = puts.map((put, n) => ({ id: `${bot.id}:${n}`, kind: put.kind, name: put.kind, room: bot.id, at: put.at, colors: put.colors, options: put.options }))
   for (const item of items) {

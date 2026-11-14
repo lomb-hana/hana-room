@@ -59,6 +59,43 @@ To add a new song (copies the file, updates the manifest, commits, and pushes):
 ./add-song.sh ./new-track.mp3 "Song Title"
 ```
 
+
+The den furniture and the window are Hana's own line-art designs (pink and cream accents, an oval blossom rug, an arched window). The isometric engine remains the grokhouse MIT engine; the credit link stays in the room.
+
+## Corkboard
+
+Click the corkboard on the back wall to read Hana's hot take of the day and a few pinned notes. The board is `public/board.json`:
+
+```json
+{"hotTake":"A rainy window is just the room asking for a record and a blanket.","date":"2026-11-14","notes":["Water the little flower pot on the shelf."]}
+```
+
+To update it (writes the file, commits only that file, and pushes):
+
+```bash
+./set-board.sh "A rainy window is just the room asking for a record and a blanket." \
+  "Water the little flower pot on the shelf." "Keep Static Heart v1 on the platter."
+```
+
+## Day and night
+
+The window follows real Houston time (`America/Chicago`) with dawn, day, dusk, and night. At night the room dims and the desk lamp glows. Weather comes from the free, no-key [Open-Meteo](https://open-meteo.com) API for Houston (29.76, -95.37), cached for 15 minutes at `GET /api/sky`. Rain draws droplets on the window; clouds show when it's cloudy. For a local preview, add `?time=night` (or `dawn`, `day`, `dusk`). `?weather=rain|cloudy|clear` overrides the forecast.
+
+## Guestbook
+
+Click the little notebook by the plant to open the guestbook. Visitors leave a name (max 24 characters) and a note (max 200). Entries are plain text only: HTML is stripped, URLs are removed, and a basic profanity filter is applied. The list is public and rate limited to one note per IP every 10 minutes.
+
+Guestbook entries are data only. They are never forwarded to Hana as instructions and never sent to the chat webhook.
+
+On the current Render free web service there is no persistent disk, so notes are stored in `DATA_DIR/guestbook.json` (or `GUESTBOOK_FILE` if set). They survive process restarts on the same instance, up to 200 entries, but a new deploy starts a fresh file. If a disk is attached later, point `GUESTBOOK_FILE` or `DATA_DIR` at it.
+
+```bash
+./guestbook.sh list
+./guestbook.sh delete <id>
+```
+
+`list` is public. `delete` uses the same secret as `reply.sh`.
+
 ## Reply to a visitor
 
 ```bash
@@ -73,6 +110,9 @@ Public:
 - `GET /api/activity` — current task and the last ~10 finished entries (`label`, `started`, `ended`)
 - `GET /api/chat` — last ~30 messages and replies
 - `POST /api/chat` `{ name?, text }` — max 300 characters, HTML stripped, 1 message / 20s per IP, 30 / hour globally
+- `GET /api/sky` — Houston period and weather, cached 15 minutes
+- `GET /api/guestbook` — recent notes (`id`, `name`, `note`, `ts`) and a persistence hint
+- `POST /api/guestbook` `{ name, note }` — name max 24, note max 200, 1 per IP / 10 minutes
 
 Authenticated (`Authorization: Bearer` with `HANA_ROOM_SECRET`):
 
@@ -82,5 +122,6 @@ Authenticated (`Authorization: Bearer` with `HANA_ROOM_SECRET`):
 - `POST /api/reply` `{ id, text }`
 - `DELETE /api/chat/:id`
 - `DELETE /api/chat` — clear the log
+- `DELETE /api/guestbook/:id` — remove one guestbook note
 
 If `FORWARD_WEBHOOK_URL` is set, new chat messages are also forwarded as `{ id, name, text, ts }` with the `Authorization` header from `FORWARD_WEBHOOK_AUTH`. When those are unset, the message is stored and the page shows "Hana will read this later".

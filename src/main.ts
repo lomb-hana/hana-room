@@ -12,9 +12,12 @@ import './styles.css'
 import { createStore } from 'zustand/vanilla'
 import { setDither } from './engine/press.ts'
 import type { Kind } from './engine/kinds.ts'
-import { api, type ActivityFeed, type ChatMessage, type RoomState, type RoomStatus } from './api.ts'
+import { api, type ActivityFeed, type BoardData, type ChatMessage, type RoomState, type RoomStatus } from './api.ts'
 import { createTerminal } from './ui/terminal.ts'
 import { createRecords } from './ui/records.ts'
+import { createBoard } from './ui/board.ts'
+import { createGuestbook } from './ui/guestbook.ts'
+import { applySkyPayload, fetchOpenMeteo, parseTimeQuery, skyNow, type SkyState } from './engine/sky.ts'
 import { planOffice } from './layout.ts'
 import { createViewer } from './scene/viewer.ts'
 import { createHud, type View } from './ui/hud.ts'
@@ -47,6 +50,15 @@ const sound = createSound()
 
 const terminal = createTerminal({ host: view })
 const records = createRecords({ host: view })
+const boardUi = createBoard({ host: view })
+const guestbook = createGuestbook({
+  host: view,
+  load: () => api.guestbook(),
+  sign: (input) => api.signGuestbook(input),
+})
+const skyOverride = parseTimeQuery()
+let sky: SkyState = skyNow(skyOverride)
+let board: BoardData | null = null
 
 const viewer = createViewer({
   view,
@@ -60,6 +72,16 @@ const viewer = createViewer({
     if (pick?.item === 'record-player') {
       sound.play('tap')
       records.toggle()
+      return
+    }
+    if (pick?.item === 'corkboard') {
+      sound.play('tap')
+      boardUi.toggle()
+      return
+    }
+    if (pick?.item === 'guestbook') {
+      sound.play('tap')
+      guestbook.toggle()
       return
     }
     select(pick?.botId ?? null, { focus: !pick?.bot })
@@ -275,6 +297,34 @@ async function loadActivity() {
   terminal.update(activity)
 }
 
+function applySky(next: SkyState) {
+  sky = applySkyPayload(next, skyOverride)
+  viewer.setSky(sky)
+}
+
+async function loadSky() {
+  const result = await api.sky()
+  if (!(result instanceof Error)) {
+    applySky(result)
+    return
+  }
+  const meteo = await fetchOpenMeteo()
+  if (meteo) applySky(meteo)
+  else applySky(skyNow(skyOverride))
+}
+
+async function loadBoard() {
+  const result = await api.board()
+  if (result instanceof Error) {
+    console.warn('board failed', result.message)
+    return
+  }
+  const notes = Array.isArray(result.notes) ? result.notes.map((n) => String(n || '')).filter(Boolean) : []
+  board = { hotTake: String(result.hotTake || ''), date: String(result.date || ''), notes }
+  boardUi.update(board)
+  viewer.setBoard(board)
+}
+
 async function main() {
   setDither(false)
   // Bust the cache: kinds.json is a stable path, and a 1-hour cache of an older
@@ -282,12 +332,18 @@ async function main() {
   const kindsUrl = `/kinds.json?v=${encodeURIComponent(new URL(import.meta.url).pathname.split('/').pop() || '1')}`
   const res = await fetch(kindsUrl)
   kinds = (await res.json()) as Record<string, Kind>
+  viewer.setSky(sky)
   viewer.start()
   applyOffice()
-  await Promise.all([loadStatus(), loadChat(), loadActivity()])
+  await Promise.all([loadStatus(), loadChat(), loadActivity(), loadSky(), loadBoard()])
   window.setInterval(() => void loadStatus(), POLL_STATUS_MS)
   window.setInterval(() => void loadChat(), POLL_CHAT_MS)
   window.setInterval(() => void loadActivity(), POLL_ACTIVITY_MS)
+  window.setInterval(() => void loadSky(), 15 * 60 * 1000)
+  window.setInterval(() => {
+    // Tick the period even if weather is cached, so dawn/dusk still arrive on time.
+    applySky(sky)
+  }, 60_000)
   window.setInterval(render, 1000)
   window.__office = { store, events: log.events, viewer: viewer.debug, glideTo: viewer.glideTo, select }
 }
