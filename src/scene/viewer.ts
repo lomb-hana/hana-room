@@ -6,6 +6,7 @@ import { iso, mkHand, lerp, streamOf, clamp } from '../engine/press.ts'
 import { WALL_H, roomBounds, roomOrigin } from '../engine/world.ts'
 import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
+import { CRT_KIND, drawCrtScreen } from '../engine/crt.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
 import { createActor, poke, poseOf, setLive, step, type Actor } from './actors.ts'
 import type { RoomPlan } from '../layout.ts'
@@ -240,6 +241,13 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
         }
         const s = spriteOf(th.it!)
         blit(s.cv, s.ratio, R.ox + s.x0, R.oy + s.y0)
+        if (th.it!.kind === CRT_KIND) {
+          const lit = actors.get(R.plan.botId)?.mood === 'work'
+          ctx.save()
+          ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
+          drawCrtScreen(mkHand(ctx, { seed: 2, fine: true }), th.it!, kinds[th.it!.kind], t, lit)
+          ctx.restore()
+        }
       }
     }
   }

@@ -185,11 +185,12 @@ function plan(a: Actor, now: number): Task {
   }
   const wanted = a.mood === 'work' ? actFor(a.tool) : null
   const away = (spots: Spot[]) => spots.filter((spot) => Math.hypot(spot.i - a.i, spot.j - a.j) > 0.6)
-  const fitting = away(wanted ? a.plan.work.filter((spot) => spot.act === wanted) : [])
-  // The tool's own spot when there is one, else anywhere else: busy bots keep moving.
-  const pool = fitting.length ? fitting : away(a.plan.work).length ? away(a.plan.work) : a.plan.work
+  const typed = wanted ? a.plan.work.filter((spot) => spot.act === wanted) : []
+  const fitting = away(typed)
+  // Stay at the tool's own spot when there is one (the desk, for typing); otherwise keep moving.
+  const pool = typed.length ? (fitting.length ? fitting : typed) : away(a.plan.work).length ? away(a.plan.work) : a.plan.work
   const spot = a.mood === 'think' && a.R() < 0.5 ? wanderSpot(a) : pk(a.R, pool)
-  return walkTo(a, spot, { kind: 'do', spot, until: now + 2600 + a.R() * 3200 })
+  return walkTo(a, spot, { kind: 'do', spot, until: now + (spot.act === 'type' && a.mood === 'work' ? 8000 : 2600) + a.R() * 3200 })
 }
 
 // Called on every live update: a new mood or tool may change the plan right away.
@@ -304,7 +305,8 @@ export function step(a: Actor, dt: number, now: number) {
   }
   if (task.kind === 'do' && now < task.until && task.until > 0) {
     // At work, now and then it turns round to peek at you, then back to the job.
-    if (a.mood === 'work' && !a.peek && a.R() < dt * 0.35) {
+    const peekRate = a.task.kind === 'do' && a.task.spot.act === 'type' ? 0.08 : 0.35
+    if (a.mood === 'work' && !a.peek && a.R() < dt * peekRate) {
       a.peek = now + 900
       kick(a, -0.25)
     }
@@ -353,8 +355,9 @@ export function poseOf(a: Actor, t: number, now: number): Pose {
     pose.mark = a.mood === 'think' ? 'dots' : doing === 'phone' ? 'note' : null
     // Each act has its own fidget: typing bobs fast, browsing sways, reading rocks, calls bounce.
     if (doing === 'type' || doing === 'plug') {
-      pose.lift += Math.abs(Math.sin(t * 9)) * 3
-      pose.sy *= 1 + Math.sin(t * 18) * 0.05
+      pose.lift += Math.abs(Math.sin(t * 8)) * 4.5
+      pose.sy *= 1 + Math.sin(t * 16) * 0.07
+      pose.lean += Math.sin(t * 8) * 0.04
     }
     if (doing === 'browse') pose.lean = Math.sin(t * 2.2) * 0.14
     if (doing === 'read' || doing === 'think') pose.lean = Math.sin(t * 1.3) * 0.08

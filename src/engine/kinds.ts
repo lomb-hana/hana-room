@@ -695,7 +695,7 @@ export function depthOf(kind: Kind, item: Item): number {
   if (kind.place === 'wall') return -1
   if (kind.place === 'rug') return -0.5
   const [w, d] = placer(item.at, sizeOf(kind, item)).size(...sizeOf(kind, item))
-  return item.at.i + w / 2 + item.at.j + d / 2 + (item.at.z || 0) * 0.01
+  return item.at.i + w / 2 + item.at.j + d / 2 + (item.at.z || 0)
 }
 // The box on screen a thing can cover.
 export function screenBox(kind: Kind, item: Item) {

@@ -223,8 +223,8 @@ function themeDef(theme: Theme, R: () => number): ThemeDef {
     rug: accent,
     things: [
       desk({ i: 0.6, j: 0, face: 'ne' }),
-      on('laptop', { i: 0.8, j: 0.3, z: 0.86, face: 'ne' }),
-      on('table-lamp', { i: 2.1, j: 0.3, z: 0.86, face: 'ne' }),
+      on('crt-pc', { i: 0.72, j: 0.08, z: 0.86, face: 'ne' }),
+      on('table-lamp', { i: 2.12, j: 0.32, z: 0.86, face: 'ne' }),
       { kind: 'bookshelf', at: { i: 0, j: 3.3, face: 'nw' } },
       { kind: 'dresser', at: { i: 3.2, j: 0, face: 'ne' } },
       on('record-player', { i: 3.4, j: 0.05, z: 1, face: 'ne' }),
@@ -232,7 +232,7 @@ function themeDef(theme: Theme, R: () => number): ThemeDef {
       { kind: 'bench-plant', at: { i: 0, j: 5.2, face: 'nw' } },
     ],
     work: [
-      { i: 1.6, j: 1.6, face: 'ne', act: 'type' },
+      { i: 1.32, j: 1.5, face: 'ne', act: 'type' },
       { i: 1.3, j: 4.1, face: 'nw', act: 'browse' },
       { i: 3.9, j: 1.2, face: 'ne', act: 'think' },
     ],

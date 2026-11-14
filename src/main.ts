@@ -92,7 +92,7 @@ function effective(s: RoomStatus): RoomState {
 function liveOf(state: RoomState, s: RoomStatus, now: number): Live {
   const detail = s.text || null
   if (state === 'waiting') return { at: now, running: false, composing: false, retrying: false, activity: null, awaiting: 'chat', subagents: false }
-  if (state === 'working') return { at: now, running: true, composing: false, retrying: false, activity: { kind: 'tool', tool: 'SetStatus', detail }, awaiting: null, subagents: false }
+  if (state === 'working') return { at: now, running: true, composing: false, retrying: false, activity: { kind: 'tool', tool: 'editor', detail }, awaiting: null, subagents: false }
   return { at: now, running: false, composing: false, retrying: false, activity: detail ? { kind: 'status', tool: null, detail } : null, awaiting: null, subagents: false }
 }
 
