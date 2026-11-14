@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Feed the Glistenworm</title>
+<style>body{margin:0;background:radial-gradient(#0a1a33,#000);color:#cfe;font-family:monospace;overflow:hidden;height:100vh}
+#hud{position:fixed;top:10px;left:10px;font-size:14px}canvas{display:block}</style></head><body>
+<div id="hud">Click to drop bacteria. Watch the worm stash them in dragonballs. <span id="c">0</span> stashed.</div>
+<canvas id="v"></canvas><script>
+const v=document.getElementById('v'),x=v.getContext('2d');let W,H;function rs(){W=v.width=innerWidth;H=v.height=innerHeight}rs();onresize=rs;
+let seg=[],food=[],balls=0,t=0;for(let i=0;i<24;i++)seg.push({x:200-i*8,y:300});
+onclick=e=>{for(let i=0;i<6;i++)food.push({x:e.clientX+Math.random()*30-15,y:e.clientY+Math.random()*30-15})};
+function step(){t+=.03;const h=seg[0];let tx=W/2+Math.cos(t*.7)*W/3,ty=H/2+Math.sin(t*1.1)*H/4;
+if(food.length){tx=food[0].x;ty=food[0].y;if(Math.hypot(tx-h.x,ty-h.y)<10){food.shift();balls++;document.getElementById('c').textContent=balls}}
+const a=Math.atan2(ty-h.y,tx-h.x);h.x+=Math.cos(a)*2.5;h.y+=Math.sin(a)*2.5;
+for(let i=1;i<seg.length;i++){const p=seg[i-1],s=seg[i],d=Math.hypot(p.x-s.x,p.y-s.y);if(d>8){s.x+=(p.x-s.x)*(d-8)/d;s.y+=(p.y-s.y)*(d-8)/d}}
+x.fillStyle='rgba(0,5,15,.35)';x.fillRect(0,0,W,H);
+food.forEach(f=>{f.y+=Math.sin(t+f.x)*.3;x.fillStyle='#7f7';x.beginPath();x.arc(f.x,f.y,2,0,7);x.fill()});
+seg.forEach((s,i)=>{const g=Math.min(balls,24)>i?1:0;x.fillStyle=g?'hsl('+(180+i*6)+',90%,'+(55+20*Math.sin(t*3+i))+'%)':'#355';x.beginPath();x.arc(s.x,s.y,6-i*.15+g*2,0,7);x.fill()});
+requestAnimationFrame(step)}step();
+</script></body></html>
