@@ -18,7 +18,7 @@ const MAX_RATIO = 3
 const SCALE = 1.3 // how big a mascot stands in its room
 const FOCUS_MS = 900
 
-const NEON_Z: Record<string, number> = { desk: 0.86, sofa: 0.82, 'bot-bed': 0.22 }
+const NEON_Z: Record<string, number> = { desk: 0.86, 'holo-desk': 0.86, sofa: 0.82, 'lounge-sofa': 0.82, 'bot-bed': 0.22, 'platform-bed': 0.32, nightstand: 0.58 }
 
 function neonRim(H: ReturnType<typeof mkHand>, it: Item, k: Kind) {
   const [w, d] = sizeOf(k, it)
@@ -150,12 +150,16 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       cv: printed(bx.x1 - bx.x0, bx.y1 - bx.y0, ratio, bx.x0, bx.y0, (c) => {
         const H = mkHand(c, { seed: 1 })
         const future = rooms.get(it.room)?.plan.room.look === 'future'
-        drawThing(H, streamOf('item', it.id), k, it, {}, { shadow: future ? false : undefined })
-        if (it.kind === 'monitor') {
-          const [x, y] = iso(it.at.i + 0.45, it.at.j + 0.12, (it.at.z ?? 0) + 0.42)
-          H.glow(x, y, 26, 18, 'teal', 0.6)
+        drawThing(H, streamOf('item', it.id), k, it, {}, future ? { shadow: false, fine: true, lw: 0.7, crisp: true } : {})
+        if (it.kind === 'monitor' || it.kind === 'holo-monitor') {
+          const [x, y] = iso(it.at.i + 0.48, it.at.j + 0.14, (it.at.z ?? 0) + 0.45)
+          H.glow(x, y, 32, 22, 'teal', 0.7)
         }
-        if (future && (it.kind === 'desk' || it.kind === 'sofa' || it.kind === 'bot-bed')) neonRim(H, it, k)
+        if (it.kind === 'table-lamp') {
+          const [x, y] = iso(it.at.i + 0.2, it.at.j + 0.2, (it.at.z ?? 0) + 0.55)
+          H.glow(x, y, 22, 18, 'sun', 0.45)
+        }
+        if (future && NEON_Z[it.kind] != null) neonRim(H, it, k)
       }),
     }
     sprites.set(key, s)
@@ -276,7 +280,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       const things: Array<{ key: number; it?: Item; actor?: Actor }> = []
       for (const it of R.plan.items) {
         const k = kinds[it.kind]
-        if (k && layerOf(k) === 'stand') things.push({ key: depthOf(k, it), it })
+        if (k && layerOf(k) === 'stand') things.push({ key: depthOf(k, it) + (it.kind === 'bed-blanket' ? 0.85 : 0), it })
       }
       const actor = actors.get(R.plan.botId)
       if (actor) things.push({ key: actor.i + actor.j + (actor.z > 0 ? 0.3 : 0.01), actor })

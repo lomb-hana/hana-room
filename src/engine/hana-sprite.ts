@@ -64,29 +64,41 @@ export function drawHana(H: Hand, pose: Pose, _mood?: Mood, id?: string) {
   const flip = flipOf(pose.face)
   const lean = pose.lean + (pose.lying ? (pose.face === 'sw' || pose.face === 'nw' ? 0.2 : -0.2) : 0)
 
-  const k = Math.max(0.45, 1 - pose.lift / 40)
-  const c2 = c
-  c2.save()
-  c2.fillStyle = `rgba(0, 0, 0, ${0.32 * k + 0.06})`
-  c2.beginPath()
-  c2.ellipse(1, 1.2, 9 * pose.sx * k, 3.4 * k, 0, 0, Math.PI * 2)
-  c2.fill()
-  c2.restore()
+  if (!pose.lying) {
+    const k = Math.max(0.45, 1 - pose.lift / 40)
+    c.save()
+    c.fillStyle = `rgba(0, 0, 0, ${0.32 * k + 0.06})`
+    c.beginPath()
+    c.ellipse(1, 1.2, 9 * pose.sx * k, 3.4 * k, 0, 0, Math.PI * 2)
+    c.fill()
+    c.restore()
+  }
 
   c.save()
   c.translate(0, -pose.lift)
   if (pose.lying) {
-    // Lie across the pod, scaled to fit, with a soft interpolate so the rotation stays clean.
-    c.translate(16, 6)
-    c.rotate(lean - 1.15)
-    drawSprite(c, front, flip, pose.sx * 0.58, pose.sy * 0.58, true)
+    // Head toward the headboard (up-left on screen), body along the mattress.
+    c.translate(2, 4)
+    c.rotate(lean - 1.05)
+    drawSprite(c, front, flip, pose.sx * 0.64, pose.sy * 0.64, true)
   } else {
     c.rotate(lean)
     drawSprite(c, im, flip, pose.sx, pose.sy)
   }
   c.restore()
 
-  if (pose.lying) drawMark(H, pose, 14 * (flip ? -1 : 1), -16 - pose.lift)
+  if (pose.lying) {
+    // Light Zs so they read on the dark room; the ink mark would disappear on the wall.
+    const x0 = -26 * (flip ? -1 : 1)
+    const y0 = -24 - pose.lift
+    for (let n = 0; n < 3; n++) {
+      const u = (pose.t * 0.35 + n / 3) % 1
+      const zx = x0 + 3 + u * 11
+      const zy = y0 - u * 22
+      const s = 2.2 + u * 2.4
+      H.line(null, [[zx - s, zy - s], [zx + s, zy - s], [zx - s, zy + s], [zx + s, zy + s]], 'paper', 1.4, { tone: 0.85 - u * 0.45, amp: 0, fine: true })
+    }
+  }
   else {
     const top = -HANA_H * pose.sy
     drawMark(H, pose, Math.sin(lean) * (-top + pose.lift) + (flip ? -8 : 8), top - pose.lift - 3)

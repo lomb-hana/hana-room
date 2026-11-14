@@ -151,6 +151,7 @@ export interface ThingCtx {
   images: Record<string, HTMLImageElement | null>
   fine: boolean
   lw?: number
+  crisp?: boolean
 }
 
 export type { Vec, Rng, InkName }

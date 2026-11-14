@@ -253,12 +253,18 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     def.floor = { style: 'grid', ink: 'blue', tone: 0.2, ink2: 'teal', tone2: 0.06 }
     def.rug = 'charcoal'
     def.things = [
-      { kind: 'desk', at: { i: 5.4, j: 0, face: 'ne' }, colors: { top: 'charcoal', legs: 'black', drawers: 'black' } },
-      { kind: 'monitor', at: { i: 5.85, j: 0.12, z: 0.86, face: 'ne' }, colors: { body: 'black', screen: 'teal' } },
-      { kind: 'chair', at: { i: 6.05, j: 1.15, face: 'sw' }, colors: { wood: 'black', seat: 'charcoal' } },
-      { kind: 'sofa', at: { i: 0, j: 2.55, face: 'nw' }, colors: { body: 'charcoal', cushion: 'teal', legs: 'black' } },
-      { kind: 'coffee-table', at: { i: 1.55, j: 3.15, face: 'nw' }, colors: { top: 'charcoal', legs: 'black' } },
-      { kind: 'snake-plant', at: { i: 0.15, j: 0.15, face: 'ne' }, colors: { pot: 'charcoal', leaf: 'teal' } },
+      { kind: 'holo-desk', at: { i: 5.35, j: 0, face: 'ne' }, colors: { top: 'charcoal', legs: 'black', drawers: 'black', led: 'teal' } },
+      { kind: 'holo-monitor', at: { i: 5.75, j: 0.1, z: 0.86, face: 'ne' }, colors: { body: 'black', screen: 'teal', stand: 'charcoal' } },
+      { kind: 'keyboard', at: { i: 5.85, j: 0.48, z: 0.86, face: 'ne' } },
+      { kind: 'mug', at: { i: 6.85, j: 0.58, z: 0.86, face: 'ne' } },
+      { kind: 'ergo-chair', at: { i: 6.0, j: 1.12, face: 'sw' }, colors: { base: 'black', seat: 'charcoal', back: 'charcoal', trim: 'teal' } },
+      { kind: 'lounge-sofa', at: { i: 0, j: 1.65, face: 'nw' }, colors: { body: 'charcoal', cushion: 'grey', lumbar: 'teal', throw: 'teal', legs: 'black' } },
+      { kind: 'coffee-table', at: { i: 1.55, j: 2.35, face: 'nw' }, colors: { top: 'charcoal', legs: 'black' } },
+      { kind: 'snake-plant', at: { i: 0.12, j: 0.12, face: 'ne' }, colors: { pot: 'charcoal', leaf: 'teal' } },
+      { kind: 'media-shelf', at: { i: 2.15, j: 0, z: 1.48, face: 'ne' } },
+      { kind: 'wall-screen', at: { i: 3.7, j: 0, z: 1.22, face: 'ne' } },
+      { kind: 'nightstand', at: { i: 2.38, j: 5.1, face: 'nw' }, colors: { body: 'charcoal', top: 'black', knob: 'silver' } },
+      { kind: 'table-lamp', at: { i: 2.46, j: 5.18, z: 0.58, face: 'nw' }, colors: { base: 'charcoal', shade: 'silver', light: 'sun' } },
     ]
     def.work = [
       { i: 6.2, j: 1.32, face: 'ne', act: 'type' },
@@ -276,15 +282,16 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     walls: def.walls,
     floor: def.floor,
     windows: future
-      ? [{ side: 'nw', pos: 6.15, w: 2.4, h: 1.45, z: 0.95 }]
+      ? [{ side: 'nw', pos: 6.4, w: 2.55, h: 1.5, z: 1.02 }]
       : [{ side: 'nw', pos: 7.4, w: 1.6, h: 1.2, z: 1.0 }],
     bulb: future ? undefined : { side: 'ne', pos: 7.6 },
   }
   const puts: Put[] = future
     ? [
-        { kind: 'rug', at: { i: 2.7, j: 2.7, face: 'ne' }, colors: { rug: 'charcoal', pattern: 'teal' } },
+        { kind: 'rug', at: { i: 3.05, j: 2.55, face: 'ne' }, colors: { rug: 'charcoal', pattern: 'teal' }, options: { pattern: 'inset' } },
         ...def.things,
-        { kind: 'bot-bed', at: { i: 6.5, j: 5.9, face: 'ne' }, colors: { base: 'charcoal', cushion: 'black', pillow: 'silver', blanket: 'teal' } },
+        { kind: 'platform-bed', at: { i: 0, j: 5.1, face: 'nw' }, colors: { frame: 'charcoal', sheet: 'silver', pillow: 'grey', blanket: 'teal', led: 'teal' } },
+        { kind: 'bed-blanket', at: { i: 1.15, j: 5.55, z: 0.33, face: 'nw' }, colors: { blanket: 'teal', fold: 'aqua' } },
       ]
     : [
         { kind: 'rug', at: { i: 2.6, j: 2.5, face: 'ne' }, colors: { rug: def.rug, pattern: 'cream' } },
@@ -327,7 +334,7 @@ export function planRoom({ snapshot, at, kinds }: { snapshot: BotSnapshot; at: [
     theme,
     room,
     items,
-    bed: { i: 7.15, j: 6.55, face: 'se', act: 'think', z: 0.2 },
+    bed: future ? { i: 1.28, j: 6.4, face: 'se', act: 'think', z: 0.36 } : { i: 7.15, j: 6.55, face: 'se', act: 'think', z: 0.2 },
     work: def.work,
     free,
   }

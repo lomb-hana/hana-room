@@ -53,6 +53,7 @@ export interface BoxOptions {
   half?: number
   full?: number
   fine?: boolean
+  amp?: number
 }
 
 // ---------------- shadow & light ----------------
@@ -103,30 +104,57 @@ export function floorOf(H: Hand, R: Rng, rm: Room, f: Room['floor'] = {}) {
   const P = H.tile(0, 0, w, d, 0)
   const style = f?.style || 'planks'
   if (style === 'grid' || isFuture(rm)) {
-    H.flat(P, '#0b1017')
+    H.flat(P, '#090d13')
     H.clip(P, () => {
       const c = H.ctx()
       c.save()
-      c.lineWidth = 0.9
-      c.strokeStyle = 'rgba(143, 224, 221, 0.16)'
-      const step = 0.75
       const stroke = (a: [number, number], b: [number, number]) => {
         c.beginPath()
         c.moveTo(a[0], a[1])
         c.lineTo(b[0], b[1])
         c.stroke()
       }
-      for (let i = 0; i <= w + 0.01; i += step) stroke(H.p(i, 0, 0), H.p(i, d, 0))
-      for (let j = 0; j <= d + 0.01; j += step) stroke(H.p(0, j, 0), H.p(w, j, 0))
-      c.strokeStyle = 'rgba(215, 181, 122, 0.14)'
-      for (let i = 0; i <= w + 0.01; i += step * 4) stroke(H.p(i, 0, 0), H.p(i, d, 0))
-      for (let j = 0; j <= d + 0.01; j += step * 4) stroke(H.p(0, j, 0), H.p(w, j, 0))
+      // Larger floor panels, quietly alternating, with a faint sheen.
+      const panel = 1.5
+      for (let i = 0; i < w; i += panel) {
+        for (let j = 0; j < d; j += panel) {
+          if ((Math.round(i / panel) + Math.round(j / panel)) % 2) {
+            H.flat(H.tile(i, j, Math.min(panel, w - i), Math.min(panel, d - j), 0), '#0c1219')
+          }
+        }
+      }
+      // Soft reflections of the neon strip (along the NE wall) and the window.
+      const glow = (pts: Vec[], css: string) => {
+        c.fillStyle = css
+        c.beginPath()
+        c.moveTo(pts[0][0], pts[0][1])
+        for (const q of pts.slice(1)) c.lineTo(q[0], q[1])
+        c.closePath()
+        c.fill()
+      }
+      glow([H.p(0.4, 0.05, 0), H.p(w - 0.3, 0.05, 0), H.p(w - 0.6, 1.15, 0), H.p(0.8, 1.15, 0)], 'rgba(143, 224, 221, 0.05)')
+      glow([H.p(0.05, 4.8, 0), H.p(0.05, 8.0, 0), H.p(2.4, 8.4, 0), H.p(2.4, 5.2, 0)], 'rgba(80, 140, 200, 0.06)')
+      c.lineWidth = 0.8
+      c.strokeStyle = 'rgba(143, 224, 221, 0.1)'
+      for (let i = 0; i <= w + 0.01; i += panel) stroke(H.p(i, 0, 0), H.p(i, d, 0))
+      for (let j = 0; j <= d + 0.01; j += panel) stroke(H.p(0, j, 0), H.p(w, j, 0))
+      c.strokeStyle = 'rgba(215, 181, 122, 0.12)'
+      c.lineWidth = 1
+      for (let i = 0; i <= w + 0.01; i += panel * 2) stroke(H.p(i, 0, 0), H.p(i, d, 0))
+      for (let j = 0; j <= d + 0.01; j += panel * 2) stroke(H.p(0, j, 0), H.p(w, j, 0))
+      // A thin specular line on a few panel edges, like a polished floor.
+      c.strokeStyle = 'rgba(180, 210, 230, 0.08)'
+      c.lineWidth = 0.7
+      stroke(H.p(3, 0, 0), H.p(3, d, 0))
+      stroke(H.p(6, 0, 0), H.p(6, d, 0))
+      stroke(H.p(0, 3, 0), H.p(w, 3, 0))
+      stroke(H.p(0, 6, 0), H.p(w, 6, 0))
       c.restore()
     })
     const oc = H.ctx()
     oc.save()
-    oc.strokeStyle = 'rgba(143, 224, 221, 0.28)'
-    oc.lineWidth = 1.2
+    oc.strokeStyle = 'rgba(143, 224, 221, 0.3)'
+    oc.lineWidth = 1.15
     oc.beginPath()
     oc.moveTo(P[0][0], P[0][1])
     for (const q of P.slice(1)) oc.lineTo(q[0], q[1])
@@ -212,9 +240,33 @@ export function backWalls(H: Hand, R: Rng, rm: Room, o: Walls = {}, sides: Side[
   const out = faces.filter((f) => sides.includes(f[0]))
   for (const [side, F, len, shade] of out) {
     if (isFuture(rm)) {
-      H.flat(F, side === 'ne' ? '#121821' : '#161c26')
-      H.tint(F, 'teal', 0.08)
+      H.flat(F, side === 'ne' ? '#10161f' : '#141b25')
+      H.tint(F, 'teal', 0.06)
       H.tint(F, 'blue', shade)
+      H.clip(F, () => {
+        const c = H.ctx()
+        c.save()
+        // Quiet wall panels: a dado and a few large inset frames, no clutter.
+        c.strokeStyle = 'rgba(143, 224, 221, 0.1)'
+        c.lineWidth = 0.8
+        const dado = wallRect(H, side, 0, len, 0.92, 0.94, 0.015)
+        c.beginPath()
+        c.moveTo(dado[0][0], dado[0][1])
+        c.lineTo(dado[1][0], dado[1][1])
+        c.stroke()
+        const frames: [number, number][] = side === 'ne' ? [[0.35, 1.9], [2.5, 1.7], [4.5, 2.2]] : [[0.3, 1.4], [1.9, 2.2], [4.4, 2.0]]
+        c.strokeStyle = 'rgba(8, 14, 22, 0.45)'
+        c.lineWidth = 1
+        for (const [p0, pw] of frames) {
+          const Rct = wallRect(H, side, p0, Math.min(len - 0.2, p0 + pw), 1.08, h - 0.28, 0.02)
+          c.beginPath()
+          c.moveTo(Rct[0][0], Rct[0][1])
+          for (const q of Rct.slice(1)) c.lineTo(q[0], q[1])
+          c.closePath()
+          c.stroke()
+        }
+        c.restore()
+      })
       continue
     }
     H.fill(F, ink, tone)
@@ -349,9 +401,10 @@ export function boxAt(
   } else paint(top, 0)
   if (o.line !== false) {
     const lw = o.lw ?? 1
-    H.outline(R, top, 'blue', lw, { tone: 0.9, amp: 0.15 })
-    H.line(R, [top[3], sw[0], sw[1], se[1], top[2]], 'blue', lw, { tone: 0.9, amp: 0.15 })
-    H.line(R, [top[2], sw[1]], 'blue', lw, { tone: 0.9, amp: 0.15 })
+    const amp = o.amp ?? (o.fine ? 0.07 : 0.15)
+    H.outline(R, top, 'blue', lw, { tone: 0.9, amp })
+    H.line(R, [top[3], sw[0], sw[1], se[1], top[2]], 'blue', lw, { tone: 0.9, amp })
+    H.line(R, [top[2], sw[1]], 'blue', lw, { tone: 0.9, amp })
   }
   return { top, se, sw }
 }
@@ -472,59 +525,199 @@ export function twinkle(H: Hand, _R: Rng, x: number, y: number, s: number, ink: 
 
 export function windowNight(H: Hand, R: Rng, side: Side, pos: number, z: number, w: number, h: number) {
   const P = wallRect(H, side, pos - w / 2, pos + w / 2, z, z + h, 0.03)
-  H.fill(P, 'blue', 0.95)
+  const left = pos - w / 2
+  const right = pos + w / 2
+  H.flat(P, '#070b14')
   H.clip(P, () => {
+    const c = H.ctx()
     const RR = streamOf('night', side, pos)
-    for (let k = 0; k < 20; k++) {
-      const at = wallPt(H, side, pos - w / 2 + rd(RR, 0.12, w - 0.12), z + rd(RR, h * 0.38, h * 0.95), 0.04)
-      twinkle(H, RR, at[0], at[1], rd(RR, 0.55, 1.15), 'paper', rd(RR, 0.35, 0.85))
+    // Night sky gradient, darker at the top.
+    const top = wallPt(H, side, pos, z + h, 0.04)
+    const bot = wallPt(H, side, pos, z, 0.04)
+    const g = c.createLinearGradient(top[0], top[1], bot[0], bot[1])
+    g.addColorStop(0, '#050814')
+    g.addColorStop(0.45, '#0a1220')
+    g.addColorStop(1, '#12182a')
+    c.fillStyle = g
+    c.beginPath()
+    c.moveTo(P[0][0], P[0][1])
+    for (const q of P.slice(1)) c.lineTo(q[0], q[1])
+    c.closePath()
+    c.fill()
+    for (let k = 0; k < 28; k++) {
+      const at = wallPt(H, side, left + rd(RR, 0.1, w - 0.1), z + rd(RR, h * 0.42, h * 0.96), 0.04)
+      twinkle(H, RR, at[0], at[1], rd(RR, 0.45, 1.05), 'paper', rd(RR, 0.28, 0.75))
     }
-    const moon = wallPt(H, side, pos + w * 0.28, z + h * 0.78, 0.04)
-    const g = ell(moon[0], moon[1], 6.5, 6.5)
-    H.fill(g, 'paper', 0.7)
-    H.tint(g, 'teal', 0.28)
-    H.glow(moon[0], moon[1], 16, 14, 'teal', 0.4)
-    let p = pos - w / 2
-    while (p < pos + w / 2 - 0.06) {
-      const bw = rd(RR, 0.14, 0.32)
-      const bh = rd(RR, 0.28, 0.9)
-      const p1 = Math.min(p + bw, pos + w / 2)
-      H.fill(wallRect(H, side, p, p1, z, z + bh, 0.045), 'black', 0.96)
-      const cols = Math.max(1, Math.floor((p1 - p) / 0.08))
-      const rows = Math.max(1, Math.floor(bh / 0.12))
-      for (let col = 0; col < cols; col++)
-        for (let row = 0; row < rows; row++) {
-          if (RR() > 0.42) continue
-          const wx = p + 0.04 + col * ((p1 - p) / cols)
-          const wz = z + 0.08 + row * (bh / rows)
-          const ink: InkName = RR() > 0.55 ? 'teal' : 'sun'
-          const [x, y] = wallPt(H, side, wx, wz, 0.05)
-          H.dot(x, y, 0.7, ink, rd(RR, 0.45, 0.9))
+    const moon = wallPt(H, side, pos + w * 0.3, z + h * 0.8, 0.04)
+    const gMoon = ell(moon[0], moon[1], 7.2, 7.2)
+    H.fill(gMoon, 'paper', 0.78)
+    H.tint(gMoon, 'teal', 0.22)
+    H.glow(moon[0], moon[1], 22, 18, 'teal', 0.45)
+    // Far, mid, and near building bands.
+    const band = (count: number, z0: number, hMin: number, hMax: number, shade: string, win: number) => {
+      let p = left - 0.04
+      for (let n = 0; n < count && p < right; n++) {
+        const bw = rd(RR, 0.16, 0.42)
+        const bh = rd(RR, hMin, hMax)
+        const p1 = Math.min(p + bw, right)
+        H.flat(wallRect(H, side, p, p1, z0, z0 + bh, 0.045), shade)
+        const cols = Math.max(1, Math.floor((p1 - p) / 0.07))
+        const rows = Math.max(1, Math.floor(bh / 0.1))
+        for (let col = 0; col < cols; col++)
+          for (let row = 0; row < rows; row++) {
+            if (RR() > win) continue
+            const wx = p + 0.035 + col * ((p1 - p) / cols)
+            const wz = z0 + 0.07 + row * (bh / rows)
+            const ink: InkName = RR() > 0.62 ? 'teal' : RR() > 0.35 ? 'sun' : 'coral'
+            const [x, y] = wallPt(H, side, wx, wz, 0.05)
+            H.dot(x, y, 0.65, ink, rd(RR, 0.4, 0.95))
+          }
+        // A thin antenna on a few roofs.
+        if (RR() < 0.22 && bh > hMin + 0.1) {
+          const [ax, ay] = wallPt(H, side, (p + p1) / 2, z0 + bh, 0.05)
+          const [tx, ty] = wallPt(H, side, (p + p1) / 2, z0 + bh + 0.16, 0.05)
+          c.strokeStyle = 'rgba(180, 200, 220, 0.45)'
+          c.lineWidth = 0.6
+          c.beginPath()
+          c.moveTo(ax, ay)
+          c.lineTo(tx, ty)
+          c.stroke()
         }
-      p = p1 + 0.03
+        p = p1 + rd(RR, 0.02, 0.05)
+      }
     }
+    band(16, z, 0.22, 0.55, '#0a1018', 0.28)
+    band(12, z, 0.38, 0.85, '#0d141e', 0.38)
+    band(9, z, 0.5, 1.05, '#111820', 0.46)
+    // One nearer tower with a cyan edge, so the skyline has a focus.
+    {
+      const tw = 0.28
+      const t0 = pos - 0.15
+      H.flat(wallRect(H, side, t0, t0 + tw, z, z + 1.18, 0.05), '#151c28')
+      const a = wallPt(H, side, t0 + tw, z, 0.05)
+      const b = wallPt(H, side, t0 + tw, z + 1.18, 0.05)
+      c.save()
+      c.strokeStyle = 'rgba(143, 224, 221, 0.55)'
+      c.shadowColor = 'rgba(143, 224, 221, 0.45)'
+      c.shadowBlur = 4
+      c.lineWidth = 0.9
+      c.beginPath()
+      c.moveTo(a[0], a[1])
+      c.lineTo(b[0], b[1])
+      c.stroke()
+      c.restore()
+    }
+    // Rain on the glass: fine diagonal streaks and a few droplets.
+    c.save()
+    c.strokeStyle = 'rgba(180, 210, 230, 0.28)'
+    c.lineWidth = 0.55
+    c.lineCap = 'round'
+    const a0 = wallPt(H, side, left, z + h, 0.055)
+    const a1 = wallPt(H, side, right, z + h, 0.055)
+    const a3 = wallPt(H, side, left, z, 0.055)
+    // Direction of a short down-right streak in wall space.
+    const dx = (a1[0] - a0[0]) * 0.04 + (a3[0] - a0[0]) * 0.12
+    const dy = (a1[1] - a0[1]) * 0.04 + (a3[1] - a0[1]) * 0.12
+    for (let k = 0; k < 70; k++) {
+      const u = rd(RR, 0.04, 0.96)
+      const v = rd(RR, 0.04, 0.96)
+      const x = a0[0] + (a1[0] - a0[0]) * u + (a3[0] - a0[0]) * v
+      const y = a0[1] + (a1[1] - a0[1]) * u + (a3[1] - a0[1]) * v
+      const len = rd(RR, 0.6, 1.4)
+      c.globalAlpha = rd(RR, 0.18, 0.45)
+      c.beginPath()
+      c.moveTo(x, y)
+      c.lineTo(x + dx * len, y + dy * len)
+      c.stroke()
+    }
+    c.globalAlpha = 1
+    c.fillStyle = 'rgba(190, 220, 235, 0.35)'
+    for (let k = 0; k < 14; k++) {
+      const u = rd(RR, 0.08, 0.92)
+      const v = rd(RR, 0.55, 0.96)
+      const x = a0[0] + (a1[0] - a0[0]) * u + (a3[0] - a0[0]) * v
+      const y = a0[1] + (a1[1] - a0[1]) * u + (a3[1] - a0[1]) * v
+      c.beginPath()
+      c.ellipse(x, y, 0.7, 1.1, 0.3, 0, Math.PI * 2)
+      c.fill()
+    }
+    // A faint glass reflection.
+    c.strokeStyle = 'rgba(220, 235, 245, 0.16)'
+    c.lineWidth = 2
+    c.globalAlpha = 1
+    c.beginPath()
+    c.moveTo(a0[0] + (a1[0] - a0[0]) * 0.12 + (a3[0] - a0[0]) * 0.15, a0[1] + (a1[1] - a0[1]) * 0.12 + (a3[1] - a0[1]) * 0.15)
+    c.lineTo(a0[0] + (a1[0] - a0[0]) * 0.38 + (a3[0] - a0[0]) * 0.7, a0[1] + (a1[1] - a0[1]) * 0.38 + (a3[1] - a0[1]) * 0.7)
+    c.stroke()
+    c.restore()
+    void R
   })
-  H.outline(R, P, 'sun', 1.05, { tone: 0.55, amp: 0.04 })
+  // Frame and sill: thin, dark, with a cyan inner lip.
+  H.outline(R, P, 'sun', 1.05, { tone: 0.5, amp: 0.02 })
   const inner = wallRect(H, side, pos - w / 2 + 0.04, pos + w / 2 - 0.04, z + 0.04, z + h - 0.04, 0.035)
-  H.outline(R, inner, 'teal', 0.7, { tone: 0.4, amp: 0.03 })
+  H.outline(R, inner, 'teal', 0.7, { tone: 0.42, amp: 0.02 })
+  const mull = wallPt(H, side, pos, z + 0.04, 0.04)
+  const mull2 = wallPt(H, side, pos, z + h - 0.04, 0.04)
+  const cx = H.ctx()
+  cx.save()
+  cx.strokeStyle = 'rgba(143, 224, 221, 0.28)'
+  cx.lineWidth = 0.8
+  cx.beginPath()
+  cx.moveTo(mull[0], mull[1])
+  cx.lineTo(mull2[0], mull2[1])
+  cx.stroke()
+  cx.restore()
   const sill = [
     wallPt(H, side, pos - w / 2 - 0.08, z, 0.04),
     wallPt(H, side, pos + w / 2 + 0.08, z, 0.04),
-    wallPt(H, side, pos + w / 2 + 0.08, z, 0.2),
-    wallPt(H, side, pos - w / 2 - 0.08, z, 0.2),
+    wallPt(H, side, pos + w / 2 + 0.08, z, 0.22),
+    wallPt(H, side, pos - w / 2 - 0.08, z, 0.22),
   ]
-  H.fill(sill, 'black', 0.9)
-  H.outline(R, sill, 'teal', 0.7, { tone: 0.45, amp: 0.04 })
+  H.fill(sill, 'black', 0.92)
+  H.outline(R, sill, 'teal', 0.7, { tone: 0.45, amp: 0.02 })
   return P
 }
 
 export function moonPatch(H: Hand, _R: Rng, _rm: Room, side: Side, pos: number, w: number) {
   const P =
     side === 'ne'
-      ? [H.p(pos - w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 1.6, 3.2, 0), H.p(pos - w / 2 + 1.6, 3.2, 0)]
-      : [H.p(0.15, pos - w / 2 + 0.2, 0), H.p(0.15, pos + w / 2 + 0.2, 0), H.p(3.4, pos + w / 2 + 1.2, 0), H.p(3.4, pos - w / 2 + 1.2, 0)]
-  H.tint(P, 'teal', 0.14)
+      ? [H.p(pos - w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 0.3, 0.15, 0), H.p(pos + w / 2 + 1.8, 3.6, 0), H.p(pos - w / 2 + 1.8, 3.6, 0)]
+      : [H.p(0.1, pos - w / 2 + 0.15, 0), H.p(0.1, pos + w / 2 + 0.15, 0), H.p(3.2, pos + w / 2 + 1.35, 0), H.p(3.2, pos - w / 2 + 1.35, 0)]
+  const c = H.ctx()
+  c.save()
+  c.beginPath()
+  c.moveTo(P[0][0], P[0][1])
+  for (const q of P.slice(1)) c.lineTo(q[0], q[1])
+  c.closePath()
+  c.fillStyle = 'rgba(90, 160, 200, 0.09)'
+  c.fill()
+  c.restore()
+  H.tint(P, 'teal', 0.1)
   return P
+}
+
+// Soft ambient occlusion under a floor item, drawn as a dark iso diamond. Uses raw
+// CSS so it stays dark on the future floor (the ink shadow would knock cream).
+export function aoBox(H: Hand, i: number, j: number, w: number, d: number) {
+  const inner = H.tile(i - 0.04, j - 0.04, w + 0.08, d + 0.08, 0.004)
+  const outer = H.tile(i - 0.18, j - 0.1, w + 0.42, d + 0.5, 0.003)
+  H.flat(outer, 'rgba(0, 0, 0, 0.16)')
+  H.flat(inner, 'rgba(0, 0, 0, 0.28)')
+}
+
+export function lampPool(H: Hand, i: number, j: number, r = 1.1) {
+  const c = H.ctx()
+  const [x, y] = H.p(i, j, 0.01)
+  const g = c.createRadialGradient(x, y, 2, x, y, r * 36)
+  g.addColorStop(0, 'rgba(215, 181, 122, 0.16)')
+  g.addColorStop(0.45, 'rgba(215, 181, 122, 0.07)')
+  g.addColorStop(1, 'rgba(215, 181, 122, 0)')
+  c.save()
+  c.fillStyle = g
+  c.beginPath()
+  c.ellipse(x, y, r * 34, r * 18, 0, 0, Math.PI * 2)
+  c.fill()
+  c.restore()
 }
 
 export function neonStrip(H: Hand, _R: Rng, rm: Room, side: Side = 'ne') {
