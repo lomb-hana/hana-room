@@ -587,9 +587,7 @@
     ],
     "colors": {
       "body": "pink",
-      "legs": "oak",
-      "cushion": "cream",
-      "button": "blush"
+      "legs": "oak"
     },
     "shapes": [
       {
@@ -652,65 +650,6 @@
         ],
         "color": "body",
         "soft": true
-      },
-      {
-        "cyl": [
-          0.13,
-          0.72,
-          0.36,
-          0.13,
-          0.32
-        ],
-        "color": "body"
-      },
-      {
-        "cyl": [
-          1.07,
-          0.72,
-          0.36,
-          0.13,
-          0.32
-        ],
-        "color": "body"
-      },
-      {
-        "box": [
-          0.3,
-          0.3,
-          0.44,
-          0.6,
-          0.16,
-          0.16
-        ],
-        "color": "cushion",
-        "soft": true
-      },
-      {
-        "dot": [
-          0.4,
-          0.18,
-          0.72
-        ],
-        "color": "button",
-        "r": 1.15
-      },
-      {
-        "dot": [
-          0.8,
-          0.18,
-          0.72
-        ],
-        "color": "button",
-        "r": 1.15
-      },
-      {
-        "dot": [
-          0.6,
-          0.18,
-          0.9
-        ],
-        "color": "button",
-        "r": 1.15
       }
     ],
     "reach": {

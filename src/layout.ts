@@ -230,7 +230,7 @@ function themeDef(theme: Theme, R: () => number): ThemeDef {
       { kind: 'bookshelf', at: { i: 0, j: 3.3, face: 'nw' } },
       { kind: 'dresser', at: { i: 3.2, j: 0, face: 'ne' } },
       on('record-player', { i: 3.4, j: 0.05, z: 1, face: 'ne' }),
-      { kind: 'armchair', at: { i: 3.2, j: 6.3, face: 'ne' }, colors: { body: 'pink', legs: 'oak', cushion: 'cream' } },
+      { kind: 'armchair', at: { i: 3.2, j: 6.3, face: 'ne' }, colors: { body: 'pink', legs: 'oak' } },
       // Comfortable viewing distance in front of the chair, screen facing the sitter, off the rug.
       { kind: 'retro-tv', at: { i: 3.34, j: 8.40, face: 'sw' } },
       { kind: 'bench-plant', at: { i: 0, j: 5.2, face: 'nw' } },
