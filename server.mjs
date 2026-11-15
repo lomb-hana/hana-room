@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import crypto from 'node:crypto'
+import { BLOCKED_MESSAGE, containsBlocked } from './moderation.mjs'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(ROOT, 'dist')
@@ -366,7 +367,6 @@ function pruneRate(now) {
 }
 
 
-const GUEST_BLOCK = /\b(nigg(?:er|a)s?|fag+ots?|kikes?|spics?|retard(?:ed|s)?|cunts?|rape[sd]?|rapist|suicid(?:e|al)|kill\s+yourself|kys)\b/i
 const GUEST_URL = /https?:\/\/\S+|\bwww\.\S+|\b[\w.-]+\.(?:com|net|org|io|co|gg|xyz|info|biz)\b/gi
 
 const guestIpLast = new Map()
@@ -413,10 +413,6 @@ function guestClean(value, max) {
   let text = cleanText(value ?? '', max * 2)
   text = text.replace(GUEST_URL, ' ')
   return text.replace(/\s+/g, ' ').trim().slice(0, max)
-}
-
-function guestBlocked(text) {
-  return GUEST_BLOCK.test(text)
 }
 
 async function fetchSky() {
@@ -582,6 +578,9 @@ const server = http.createServer(async (req, res) => {
     if (typeof body.text === 'string' && body.text.replace(/<[^>]*>/g, '').trim().length > MAX_TEXT) {
       return send(res, 400, { error: 'Keep it under 300 characters.' })
     }
+    if (containsBlocked(text) || (name && containsBlocked(name))) {
+      return send(res, 400, { error: BLOCKED_MESSAGE })
+    }
     const now = Date.now()
     const ip = clientIp(req) || 'unknown'
     pruneRate(now)
@@ -623,6 +622,7 @@ const server = http.createServer(async (req, res) => {
     const text = cleanText(body.text ?? '', MAX_TEXT)
     if (!id) return send(res, 400, { error: 'Missing message id.' })
     if (!text) return send(res, 400, { error: 'Please include a reply.' })
+    if (containsBlocked(text)) return send(res, 400, { error: BLOCKED_MESSAGE })
     const found = messages.messages.find((m) => m.id === id)
     if (!found) return send(res, 404, { error: 'No message with that id.' })
     found.reply = { text, ts: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') }
@@ -669,8 +669,8 @@ const server = http.createServer(async (req, res) => {
     const note = guestClean(body.note ?? '', MAX_GUEST_NOTE)
     if (!name) return send(res, 400, { error: 'Please leave a name (up to 24 characters).' })
     if (!note) return send(res, 400, { error: 'Please write a short note (up to 200 characters).' })
-    if (guestBlocked(`${name} ${note}`)) {
-      return send(res, 400, { error: 'That note could not be posted.' })
+    if (containsBlocked(name) || containsBlocked(note)) {
+      return send(res, 400, { error: BLOCKED_MESSAGE })
     }
     const now = Date.now()
     const ip = clientIp(req) || 'unknown'

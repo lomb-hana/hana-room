@@ -83,7 +83,7 @@ The window follows real Houston time (`America/Chicago`) with dawn, day, dusk, a
 
 ## Guestbook
 
-Click the little notebook by the plant to open the guestbook. Visitors leave a name (max 24 characters) and a note (max 200). Entries are plain text only: HTML is stripped, URLs are removed, and a basic profanity filter is applied. The list is public and rate limited to one note per IP every 10 minutes.
+Click the little notebook by the plant to open the guestbook. Visitors leave a name (max 24 characters) and a note (max 200). Entries are plain text only: HTML is stripped, URLs are removed, and a server-side filter rejects slurs (including common obfuscations) with a friendly error. The blocklist stays on the server and is not shipped to the client. The list is public and rate limited to one note per IP every 10 minutes.
 
 Guestbook entries are data only. They are never forwarded to Hana as instructions and never sent to the chat webhook.
 
@@ -95,6 +95,17 @@ On the current Render free web service there is no persistent disk, so notes are
 ```
 
 `list` is public. `delete` uses the same secret as `reply.sh`.
+
+## Chat log
+
+```bash
+./chat.sh list
+./chat.sh delete <id>
+```
+
+`list` is public. `delete` removes one visitor message and its reply, using the same secret as `reply.sh`.
+
+Visitor chat and guestbook notes go through the same server-side slur filter. A blocked message is not stored, not shown, and not forwarded to Hana's webhook. Replies are checked the same way so a blocked word cannot be posted back to the room.
 
 ## Reply to a visitor
 
@@ -109,17 +120,17 @@ Public:
 - `GET /api/status`
 - `GET /api/activity` — current task and the last ~10 finished entries (`label`, `started`, `ended`)
 - `GET /api/chat` — last ~30 messages and replies
-- `POST /api/chat` `{ name?, text }` — max 300 characters, HTML stripped, 1 message / 20s per IP, 30 / hour globally
+- `POST /api/chat` `{ name?, text }` — max 300 characters, HTML stripped, slur filter applied before store or forward, 1 message / 20s per IP, 30 / hour globally
 - `GET /api/sky` — Houston period and weather, cached 15 minutes
 - `GET /api/guestbook` — recent notes (`id`, `name`, `note`, `ts`) and a persistence hint
-- `POST /api/guestbook` `{ name, note }` — name max 24, note max 200, 1 per IP / 10 minutes
+- `POST /api/guestbook` `{ name, note }` — name max 24, note max 200, slur filter, 1 per IP / 10 minutes
 
 Authenticated (`Authorization: Bearer` with `HANA_ROOM_SECRET`):
 
 - `POST /api/status` `{ state, text }`
 - `POST /api/activity` `{ action: "start"|"done", label? }` — start sets status to working; done marks the task finished
 - `DELETE /api/activity` — clear the recent list
-- `POST /api/reply` `{ id, text }`
+- `POST /api/reply` `{ id, text }` — same slur filter as incoming chat; a blocked reply is refused and not written
 - `DELETE /api/chat/:id`
 - `DELETE /api/chat` — clear the log
 - `DELETE /api/guestbook/:id` — remove one guestbook note

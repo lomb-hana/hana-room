@@ -1,0 +1,56 @@
+# Server-side blocklist of racial, ethnic, and homophobic slurs.
+# Loaded only by the Node server. Do not import this file from client code.
+# One term or phrase per line. Comments start with #.
+
+nigger
+niggers
+nigga
+niggas
+niggah
+niggahs
+spic
+spics
+spick
+spicks
+kike
+kikes
+chink
+chinks
+gook
+gooks
+wetback
+wetbacks
+beaner
+beaners
+raghead
+ragheads
+towelhead
+towelheads
+paki
+pakis
+coon
+coons
+darkie
+darkies
+sambo
+sambos
+zipperhead
+zipperheads
+redskin
+redskins
+camel jockey
+jungle bunny
+porch monkey
+faggot
+faggots
+faggit
+faggits
+faggoty
+fag
+fags
+tranny
+trannies
+dyke
+dykes
+poofter
+poofters
