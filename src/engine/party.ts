@@ -77,16 +77,29 @@ function fillPoly(ctx: CanvasRenderingContext2D, pts: Pt[], fill: string) {
   ctx.fill()
 }
 
-function clipMany(ctx: CanvasRenderingContext2D, list: Pt[][], fn: () => void) {
+function clipPoly(ctx: CanvasRenderingContext2D, pts: Pt[], fn: () => void) {
   ctx.save()
-  ctx.beginPath()
-  for (const pts of list) {
-    pts.forEach((p, n) => (n ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
-    ctx.closePath()
-  }
+  path(ctx, pts)
   ctx.clip()
   fn()
   ctx.restore()
+}
+
+// Visible room outline: two back walls plus the open front of the floor diamond.
+function roomOutline(H: Hand): Pt[] {
+  return [H.p(0, 0, WALL_H), H.p(9, 0, WALL_H), H.p(9, 0, 0), H.p(9, 9, 0), H.p(0, 9, 0), H.p(0, 9, WALL_H)]
+}
+
+function wallPt(H: Hand, side: 'ne' | 'nw', u: number, z: number, inset = 0.04): Pt {
+  return side === 'ne' ? H.p(u, inset, z) : H.p(inset, u, z)
+}
+
+function wallQuad(H: Hand, side: 'ne' | 'nw', u0: number, u1: number, z0: number, z1: number): Pt[] {
+  return [wallPt(H, side, u0, z0), wallPt(H, side, u1, z0), wallPt(H, side, u1, z1), wallPt(H, side, u0, z1)]
+}
+
+function clampRoom(i: number, j: number, z: number): [number, number, number] {
+  return [Math.min(8.9, Math.max(0.1, i)), Math.min(8.9, Math.max(0.1, j)), Math.min(WALL_H, Math.max(0, z))]
 }
 
 export function drawParty(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean, show: PartyShow = 'disco') {
@@ -346,53 +359,66 @@ function drawSpark(ctx: CanvasRenderingContext2D, x: number, y: number, r: numbe
 
 function drawNeon(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
   const ctx = H.ctx()
-  const { floor, walls } = roomPolys(H)
+  const { floor, nw, ne } = roomPolys(H)
   ctx.save()
   ctx.globalAlpha = alpha
   fillPoly(ctx, floor, 'rgba(18, 4, 28, 0.22)')
-  for (const w of walls) fillPoly(ctx, w, 'rgba(12, 2, 24, 0.16)')
+  fillPoly(ctx, nw, 'rgba(12, 2, 24, 0.16)')
+  fillPoly(ctx, ne, 'rgba(12, 2, 24, 0.16)')
 
-  const sweep = reduced ? 0 : (t * 26) % 14
-  clipMany(ctx, walls, () => {
-    let y = -80 + sweep
-    let n = 0
-    while (y < 420) {
-      ctx.fillStyle = n % 2 ? 'rgba(255, 50, 190, 0.32)' : 'rgba(30, 230, 255, 0.3)'
-      ctx.fillRect(-80, y, 900, 2.8)
-      y += 8
-      n++
-    }
-  })
+  const gap = 0.13
+  const shift = reduced ? 0 : (t * 0.38) % (gap * 2)
+  const stroke = 0.05
+  for (const side of ['ne', 'nw'] as const) {
+    const wall = side === 'ne' ? ne : nw
+    clipPoly(ctx, wall, () => {
+      let n = 0
+      for (let z = -gap + shift; z < WALL_H + gap; z += gap) {
+        ctx.fillStyle = n % 2 ? 'rgba(255, 50, 190, 0.34)' : 'rgba(30, 230, 255, 0.32)'
+        fillPoly(ctx, wallQuad(H, side, 0, 9, z, z + stroke), ctx.fillStyle as string)
+        n++
+      }
+    })
+  }
 
-  const pixels = reduced ? 12 : 28
   ctx.globalCompositeOperation = 'lighter'
+  const pixels = reduced ? 12 : 26
   for (let n = 0; n < pixels; n++) {
-    const side = n % 2
-    const u = ((n * 1.73) % 1) * 8.4 + 0.3
-    const z = 0.55 + ((n * 0.37) % 1) * 1.85
-    const p = side ? H.p(u, 0.08, z) : H.p(0.08, u, z)
     const blink = reduced ? 0.7 : 0.35 + 0.65 * Math.max(0, Math.sin(t * (2.2 + (n % 4) * 0.4) + n * 1.9))
     if (blink < 0.28) continue
     const rgb = n % 3 === 0 ? '255,80,200' : n % 3 === 1 ? '40,240,255' : '255,255,210'
-    ctx.fillStyle = `rgba(${rgb},${0.75 * blink})`
-    const s = 3.2 + (n % 3) * 0.8
-    ctx.fillRect(p[0] - s / 2, p[1] - s / 2, s, s)
+    const col = `rgba(${rgb},${0.8 * blink})`
+    const s = 0.09 + (n % 3) * 0.03
+    if (n % 3 !== 2) {
+      const side: 'ne' | 'nw' = n % 2 ? 'ne' : 'nw'
+      const u = 0.25 + ((n * 1.73) % 1) * 8.5
+      const z = 0.35 + ((n * 0.37) % 1) * 2.0
+      const wall = side === 'ne' ? ne : nw
+      clipPoly(ctx, wall, () => fillPoly(ctx, wallQuad(H, side, u, u + s * 1.6, z, z + s * 2.2), col))
+    } else {
+      const [i, j, z] = clampRoom(1.1 + ((n * 0.61) % 1) * 6.8, 1.1 + ((n * 0.47) % 1) * 6.8, 0.7 + ((n * 0.29) % 1) * 1.7)
+      const a = H.p(i, j, z)
+      const b = H.p(i + s, j, z)
+      const c = H.p(i + s, j + s, z)
+      const d = H.p(i, j + s, z)
+      clipPoly(ctx, roomOutline(H), () => fillPoly(ctx, [a, b, c, d], col))
+    }
   }
-  // A couple of soft floor glows so the room still feels lit for the dance.
-  const mid = H.p(rug.i, rug.j, 0)
-  for (let k = 0; k < 3; k++) {
-    const ang = t * 0.5 + k * 2.1
-    const land = H.p(rug.i + Math.cos(ang) * 1.4, rug.j + Math.sin(ang) * 1.4, 0)
-    const rgb = k % 2 ? '255,60,190' : '40,220,255'
-    const g = ctx.createRadialGradient(land[0], land[1], 2, land[0], land[1], 54)
-    g.addColorStop(0, `rgba(${rgb},${reduced ? 0.2 : 0.3})`)
-    g.addColorStop(1, `rgba(${rgb},0)`)
-    ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.ellipse(land[0], land[1], 50, 24, 0, 0, TAU)
-    ctx.fill()
-  }
-  void mid
+
+  clipPoly(ctx, floor, () => {
+    for (let k = 0; k < 3; k++) {
+      const ang = t * 0.5 + k * 2.1
+      const land = H.p(rug.i + Math.cos(ang) * 1.4, rug.j + Math.sin(ang) * 1.4, 0)
+      const rgb = k % 2 ? '255,60,190' : '40,220,255'
+      const g = ctx.createRadialGradient(land[0], land[1], 2, land[0], land[1], 54)
+      g.addColorStop(0, `rgba(${rgb},${reduced ? 0.2 : 0.3})`)
+      g.addColorStop(1, `rgba(${rgb},0)`)
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.ellipse(land[0], land[1], 50, 25, 0, 0, TAU)
+      ctx.fill()
+    }
+  })
   ctx.restore()
 }
 
@@ -400,61 +426,79 @@ function drawNeon(H: Hand, t: number, alpha: number, rug: { i: number; j: number
 // Starry night
 // ---------------------------------------------------------------------------
 
-function drawStarry(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
-  const ctx = H.ctx()
-  const { floor, walls } = roomPolys(H)
-  ctx.save()
-  ctx.globalAlpha = alpha
-  fillPoly(ctx, floor, 'rgba(10, 12, 36, 0.46)')
-  for (const w of walls) fillPoly(ctx, w, 'rgba(8, 10, 32, 0.42)')
-
-  // Slow aurora on the back walls.
-  clipMany(ctx, walls, () => {
+function drawAurora(H: Hand, ctx: CanvasRenderingContext2D, side: 'ne' | 'nw', t: number, reduced: boolean) {
+  const wall = side === 'ne' ? roomPolys(H).ne : roomPolys(H).nw
+  const bands = [
+    { rgb: '70,200,190', z: 2.05, half: 0.28, phase: 0.2 },
+    { rgb: '150,90,210', z: 1.45, half: 0.32, phase: 1.1 },
+    { rgb: '255,140,190', z: 0.85, half: 0.26, phase: 2.0 },
+  ]
+  clipPoly(ctx, wall, () => {
     ctx.globalCompositeOperation = 'lighter'
-    const bands = [
-      { rgb: '70,200,190', y: 0.12, w: 70 },
-      { rgb: '150,90,210', y: 0.38, w: 80 },
-      { rgb: '255,140,190', y: 0.62, w: 64 },
-    ]
-    for (let i = 0; i < bands.length; i++) {
-      const b = bands[i]
-      const wave = reduced ? 0 : Math.sin(t * 0.35 + i * 1.1) * 16
-      const left = H.p(0, 0, WALL_H * (1 - b.y))
-      const right = H.p(9, 0, WALL_H * (1 - b.y))
-      const y = (left[1] + right[1]) / 2 + wave
-      const g = ctx.createLinearGradient(-40, y, 520, y + 10)
-      g.addColorStop(0, `rgba(${b.rgb},0)`)
-      g.addColorStop(0.3, `rgba(${b.rgb},0.22)`)
-      g.addColorStop(0.55, `rgba(${b.rgb},0.12)`)
-      g.addColorStop(1, `rgba(${b.rgb},0)`)
-      ctx.fillStyle = g
-      ctx.beginPath()
-      ctx.ellipse(240, y, 280, b.w / 2, -0.18, 0, TAU)
+    for (const b of bands) {
+      const pts: Pt[] = []
+      const steps = 12
+      for (let s = 0; s <= steps; s++) {
+        const u = (s / steps) * 9
+        const z = b.z + (reduced ? 0 : Math.sin(t * 0.35 + b.phase + u * 0.7) * b.half * 0.45)
+        pts.push(wallPt(H, side, u, z + b.half))
+      }
+      for (let s = steps; s >= 0; s--) {
+        const u = (s / steps) * 9
+        const z = b.z + (reduced ? 0 : Math.sin(t * 0.35 + b.phase + u * 0.7) * b.half * 0.45)
+        pts.push(wallPt(H, side, u, z - b.half))
+      }
+      ctx.fillStyle = `rgba(${b.rgb},0.22)`
+      path(ctx, pts)
       ctx.fill()
     }
   })
+}
+
+function drawStarry(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
+  const ctx = H.ctx()
+  const { floor, nw, ne } = roomPolys(H)
+  ctx.save()
+  ctx.globalAlpha = alpha
+  fillPoly(ctx, floor, 'rgba(10, 12, 36, 0.46)')
+  fillPoly(ctx, nw, 'rgba(8, 10, 32, 0.42)')
+  fillPoly(ctx, ne, 'rgba(8, 10, 32, 0.42)')
+
+  drawAurora(H, ctx, 'ne', t, reduced)
+  drawAurora(H, ctx, 'nw', t, reduced)
 
   const stars = reduced ? 14 : 36
   ctx.globalCompositeOperation = 'lighter'
   for (let n = 0; n < stars; n++) {
-    const side = n % 3
-    const u = 0.25 + ((n * 2.127) % 1) * 8.5
-    const z = 1.15 + ((n * 0.61) % 1) * 1.4
-    const p = side === 0 ? H.p(u, 0.12, z) : side === 1 ? H.p(0.12, u, z) : H.p(1.2 + ((n * 0.41) % 1) * 6.4, 1.2 + ((n * 0.73) % 1) * 6.4, WALL_H + 0.15)
     const tw = reduced ? 0.55 : 0.25 + 0.75 * Math.abs(Math.sin(t * (0.8 + (n % 5) * 0.15) + n))
     if (tw < 0.18) continue
     const r = 1.1 + (n % 4) * 0.35
-    drawSpark(ctx, p[0], p[1], r * tw, n % 4 === 0 ? '#ffd6ff' : '#fff8dc', 0.55 * tw)
+    const color = n % 4 === 0 ? '#ffd6ff' : '#fff8dc'
+    const u = 0.3 + ((n * 2.127) % 1) * 8.4
+    const z = 1.15 + ((n * 0.61) % 1) * 1.25
+    if (n % 3 === 0) {
+      const p = wallPt(H, 'ne', u, z)
+      clipPoly(ctx, ne, () => drawSpark(ctx, p[0], p[1], r * tw, color, 0.55 * tw))
+    } else if (n % 3 === 1) {
+      const p = wallPt(H, 'nw', u, z)
+      clipPoly(ctx, nw, () => drawSpark(ctx, p[0], p[1], r * tw, color, 0.55 * tw))
+    } else {
+      const [i, j] = clampRoom(0.6 + ((n * 0.41) % 1) * 7.8, 0.6 + ((n * 0.73) % 1) * 7.8, 0)
+      const p = H.p(i, j, WALL_H - 0.04)
+      clipPoly(ctx, roomOutline(H), () => drawSpark(ctx, p[0], p[1], r * tw, color, 0.55 * tw))
+    }
   }
-  // Soft pool of light on the rug so Hana stays readable.
-  const mid = H.p(rug.i, rug.j, 0)
-  const g = ctx.createRadialGradient(mid[0], mid[1], 4, mid[0], mid[1], 70)
-  g.addColorStop(0, 'rgba(170, 140, 220, 0.16)')
-  g.addColorStop(1, 'rgba(170, 140, 220, 0)')
-  ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.ellipse(mid[0], mid[1], 66, 32, 0, 0, TAU)
-  ctx.fill()
+
+  clipPoly(ctx, floor, () => {
+    const mid = H.p(rug.i, rug.j, 0)
+    const g = ctx.createRadialGradient(mid[0], mid[1], 4, mid[0], mid[1], 70)
+    g.addColorStop(0, 'rgba(170, 140, 220, 0.16)')
+    g.addColorStop(1, 'rgba(170, 140, 220, 0)')
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.ellipse(mid[0], mid[1], 66, 33, 0, 0, TAU)
+    ctx.fill()
+  })
   ctx.restore()
 }
 
@@ -507,7 +551,7 @@ function strobePulse(t: number, reduced: boolean) {
 
 function drawRave(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
   const ctx = H.ctx()
-  const { floor, walls } = roomPolys(H)
+  const { floor, nw, ne } = roomPolys(H)
   const colors = ['255,70,150', '70,230,255', '255,220,70', '180,90,255', '80,255,140']
   const pulse = strobePulse(t, reduced)
   const flashColor = colors[Math.floor(t * 2.8) % colors.length]
@@ -515,49 +559,63 @@ function drawRave(H: Hand, t: number, alpha: number, rug: { i: number; j: number
   ctx.save()
   ctx.globalAlpha = alpha
   fillPoly(ctx, floor, 'rgba(10, 4, 20, 0.3)')
-  for (const w of walls) fillPoly(ctx, w, 'rgba(8, 2, 16, 0.18)')
+  fillPoly(ctx, nw, 'rgba(8, 2, 16, 0.18)')
+  fillPoly(ctx, ne, 'rgba(8, 2, 16, 0.18)')
 
   if (pulse > 0.02) {
     const a = 0.16 * pulse
     fillPoly(ctx, floor, `rgba(${flashColor},${a})`)
-    for (const w of walls) fillPoly(ctx, w, `rgba(${flashColor},${a * 0.7})`)
+    fillPoly(ctx, nw, `rgba(${flashColor},${a * 0.7})`)
+    fillPoly(ctx, ne, `rgba(${flashColor},${a * 0.7})`)
   }
 
   ctx.globalCompositeOperation = 'lighter'
   const corners: Array<[number, number, number]> = [
-    [0.15, 0.15, WALL_H - 0.15],
-    [8.85, 0.15, WALL_H - 0.2],
-    [0.15, 8.6, 1.6],
-    [8.85, 8.6, 1.5],
+    [0.2, 0.2, WALL_H - 0.08],
+    [8.8, 0.2, WALL_H - 0.08],
+    [0.2, 8.8, WALL_H - 0.08],
+    [8.8, 8.8, WALL_H - 0.08],
   ]
   const beams = reduced ? 4 : 8
-  for (let k = 0; k < beams; k++) {
-    const [i0, j0, z0] = corners[k % corners.length]
-    const ang = (reduced ? k * 0.7 : t * (0.55 + (k % 3) * 0.08)) + k * 1.15
-    const reach = 5 + (k % 3) * 1.4
-    const dest = H.p(4.5 + Math.cos(ang) * reach * 0.35, 4.5 + Math.sin(ang) * reach * 0.35, 0)
-    const origin = H.p(i0, j0, z0)
-    const rgb = colors[k % colors.length]
-    const beam = ctx.createLinearGradient(origin[0], origin[1], dest[0], dest[1])
-    beam.addColorStop(0, `rgba(${rgb},${reduced ? 0.18 : 0.36})`)
-    beam.addColorStop(0.7, `rgba(${rgb},0.08)`)
-    beam.addColorStop(1, `rgba(${rgb},0)`)
-    ctx.strokeStyle = beam
-    ctx.lineWidth = reduced ? 2.2 : 3.6
-    ctx.beginPath()
-    ctx.moveTo(origin[0], origin[1])
-    ctx.lineTo(dest[0], dest[1])
-    ctx.stroke()
-  }
+  clipPoly(ctx, roomOutline(H), () => {
+    for (let k = 0; k < beams; k++) {
+      const [i0, j0, z0] = corners[k % corners.length]
+      const ang = (reduced ? k * 0.7 : t * (0.55 + (k % 3) * 0.08)) + k * 1.15
+      const [di, dj] = clampRoom(4.5 + Math.cos(ang) * 3.1, 4.5 + Math.sin(ang) * 3.1, 0)
+      const dest = H.p(di, dj, 0.02)
+      const origin = H.p(i0, j0, z0)
+      const rgb = colors[k % colors.length]
+      const beam = ctx.createLinearGradient(origin[0], origin[1], dest[0], dest[1])
+      beam.addColorStop(0, `rgba(${rgb},${reduced ? 0.18 : 0.36})`)
+      beam.addColorStop(0.7, `rgba(${rgb},0.08)`)
+      beam.addColorStop(1, `rgba(${rgb},0)`)
+      ctx.strokeStyle = beam
+      ctx.lineWidth = reduced ? 2.2 : 3.6
+      ctx.beginPath()
+      ctx.moveTo(origin[0], origin[1])
+      ctx.lineTo(dest[0], dest[1])
+      ctx.stroke()
+      // A small floor hit so the beam reads as landing in the room.
+      const hit = ctx.createRadialGradient(dest[0], dest[1], 1, dest[0], dest[1], 16)
+      hit.addColorStop(0, `rgba(${rgb},0.28)`)
+      hit.addColorStop(1, `rgba(${rgb},0)`)
+      ctx.fillStyle = hit
+      ctx.beginPath()
+      ctx.ellipse(dest[0], dest[1], 14, 7, 0, 0, TAU)
+      ctx.fill()
+    }
+  })
 
-  const mid = H.p(rug.i, rug.j, 0)
-  const g = ctx.createRadialGradient(mid[0], mid[1], 4, mid[0], mid[1], 62)
-  g.addColorStop(0, `rgba(${colors[Math.floor(t) % colors.length]},${reduced ? 0.18 : 0.28})`)
-  g.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.ellipse(mid[0], mid[1], 58, 28, 0, 0, TAU)
-  ctx.fill()
+  clipPoly(ctx, floor, () => {
+    const mid = H.p(rug.i, rug.j, 0)
+    const g = ctx.createRadialGradient(mid[0], mid[1], 4, mid[0], mid[1], 62)
+    g.addColorStop(0, `rgba(${colors[Math.floor(t) % colors.length]},${reduced ? 0.18 : 0.28})`)
+    g.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.ellipse(mid[0], mid[1], 58, 29, 0, 0, TAU)
+    ctx.fill()
+  })
   ctx.restore()
 }
 
@@ -567,50 +625,56 @@ function drawRave(H: Hand, t: number, alpha: number, rug: { i: number; j: number
 
 function drawBlossom(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
   const ctx = H.ctx()
-  const { floor, walls } = roomPolys(H)
+  const { floor, nw, ne } = roomPolys(H)
   ctx.save()
   ctx.globalAlpha = alpha
   fillPoly(ctx, floor, 'rgba(255, 186, 196, 0.18)')
-  for (const w of walls) fillPoly(ctx, w, 'rgba(255, 170, 170, 0.1)')
+  fillPoly(ctx, nw, 'rgba(255, 170, 170, 0.1)')
+  fillPoly(ctx, ne, 'rgba(255, 170, 170, 0.1)')
 
-  const mid = H.p(rug.i, rug.j, 0)
-  const glow = ctx.createRadialGradient(mid[0], mid[1], 6, mid[0], mid[1], 90)
-  glow.addColorStop(0, 'rgba(255, 200, 170, 0.22)')
-  glow.addColorStop(1, 'rgba(255, 200, 170, 0)')
-  ctx.fillStyle = glow
-  ctx.beginPath()
-  ctx.ellipse(mid[0], mid[1], 86, 42, 0, 0, TAU)
-  ctx.fill()
+  clipPoly(ctx, floor, () => {
+    const mid = H.p(rug.i, rug.j, 0)
+    const glow = ctx.createRadialGradient(mid[0], mid[1], 6, mid[0], mid[1], 90)
+    glow.addColorStop(0, 'rgba(255, 200, 170, 0.22)')
+    glow.addColorStop(1, 'rgba(255, 200, 170, 0)')
+    ctx.fillStyle = glow
+    ctx.beginPath()
+    ctx.ellipse(mid[0], mid[1], 86, 43, 0, 0, TAU)
+    ctx.fill()
+  })
 
   const petals = reduced ? 10 : 22
-  for (let n = 0; n < petals; n++) {
-    const cycle = 5.5 + (n % 5) * 0.7
-    const u = (t / cycle + n * 0.137) % 1
-    const fall = 0.72
-    const startI = 0.8 + ((n * 1.91) % 1) * 7.4
-    const startJ = 0.6 + ((n * 1.27) % 1) * 7.6
-    const landI = rug.i + Math.cos(n * 1.7) * (0.35 + (n % 5) * 0.22)
-    const landJ = rug.j + Math.sin(n * 1.3) * (0.3 + (n % 4) * 0.2)
-    const drift = reduced ? 0 : Math.sin(t * 0.9 + n) * 0.35
-    let i: number
-    let j: number
-    let z: number
-    if (u < fall) {
-      const p = u / fall
-      const ease = p * p * (3 - 2 * p)
-      i = startI + (landI - startI) * ease + drift * (1 - p)
-      j = startJ + (landJ - startJ) * ease
-      z = WALL_H * (1 - p) + 0.02
-    } else {
-      i = landI + (reduced ? 0 : Math.sin(t * 0.5 + n) * 0.03)
-      j = landJ
-      z = 0.02
+  clipPoly(ctx, roomOutline(H), () => {
+    for (let n = 0; n < petals; n++) {
+      const cycle = 5.5 + (n % 5) * 0.7
+      const u = (t / cycle + n * 0.137) % 1
+      const fall = 0.72
+      const startI = 0.8 + ((n * 1.91) % 1) * 7.4
+      const startJ = 0.6 + ((n * 1.27) % 1) * 7.6
+      const landI = rug.i + Math.cos(n * 1.7) * (0.35 + (n % 5) * 0.22)
+      const landJ = rug.j + Math.sin(n * 1.3) * (0.3 + (n % 4) * 0.2)
+      const drift = reduced ? 0 : Math.sin(t * 0.9 + n) * 0.25
+      let i: number
+      let j: number
+      let z: number
+      if (u < fall) {
+        const p = u / fall
+        const ease = p * p * (3 - 2 * p)
+        i = startI + (landI - startI) * ease + drift * (1 - p)
+        j = startJ + (landJ - startJ) * ease
+        z = WALL_H * (1 - p) + 0.02
+      } else {
+        i = landI + (reduced ? 0 : Math.sin(t * 0.5 + n) * 0.03)
+        j = landJ
+        z = 0.02
+      }
+      const [ci, cj, cz] = clampRoom(i, j, z)
+      const pt = H.p(ci, cj, cz)
+      const rot = n * 0.7 + t * (reduced ? 0.15 : 0.6)
+      const col = n % 3 === 0 ? 'rgba(255, 214, 220, 0.9)' : n % 3 === 1 ? 'rgba(247, 176, 186, 0.9)' : 'rgba(255, 236, 232, 0.92)'
+      drawPetal(ctx, pt[0], pt[1], 4.2 + (n % 3), rot, col)
     }
-    const pt = H.p(i, j, z)
-    const rot = n * 0.7 + t * (reduced ? 0.15 : 0.6)
-    const col = n % 3 === 0 ? 'rgba(255, 214, 220, 0.9)' : n % 3 === 1 ? 'rgba(247, 176, 186, 0.9)' : 'rgba(255, 236, 232, 0.92)'
-    drawPetal(ctx, pt[0], pt[1], 4.2 + (n % 3), rot, col)
-  }
+  })
   ctx.restore()
 }
 
