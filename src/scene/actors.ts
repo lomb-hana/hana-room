@@ -56,6 +56,8 @@ export type Actor = {
   tool: string | null
   // A record is playing: walk to the rug and dance until it stops.
   dancing: boolean
+  // Rave show: a slightly harder bounce. Always reset when the music stops.
+  danceHard: boolean
   R: Rng
 }
 
@@ -81,6 +83,7 @@ export function createActor({ plan, live, now }: { plan: RoomPlan; live: Presenc
     emote: null,
     tool: live.activity?.tool ?? null,
     dancing: false,
+    danceHard: false,
     R,
   }
 }
@@ -182,8 +185,13 @@ function wanderSpot(a: Actor): Spot {
 export function setDancing(a: Actor, on: boolean, now: number) {
   if (a.dancing === on) return
   a.dancing = on
+  if (!on) a.danceHard = false
   if (on) a.emote = { mark: 'note', until: now + 900 }
   a.task = { kind: 'rest', until: 0 }
+}
+
+export function setDanceHard(a: Actor, hard: boolean) {
+  a.danceHard = hard
 }
 
 function plan(a: Actor, now: number): Task {
@@ -383,6 +391,11 @@ export function poseOf(a: Actor, t: number, now: number): Pose {
     if (reduced) {
       pose.lift += 3 + Math.sin(t * 1.6) * 1.4
       pose.lean = Math.sin(t * 1.2) * 0.08
+    } else if (a.danceHard) {
+      pose.lift += 11 + Math.abs(Math.sin(t * 8.4)) * 12
+      pose.lean = Math.sin(t * 4.6) * 0.32
+      pose.sx *= 1 + Math.sin(t * 8.4) * 0.11
+      pose.sy *= 1 - Math.sin(t * 8.4) * 0.1
     } else {
       pose.lift += 7 + Math.abs(Math.sin(t * 6.2)) * 8
       pose.lean = Math.sin(t * 3.4) * 0.24

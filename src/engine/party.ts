@@ -1,12 +1,54 @@
-// A lightweight dance-party overlay while a record is playing: a dim floor,
-// sweeping colored lights, a hanging faceted disco ball, and sparkles.
-// Drawn in room iso space after the furniture.
+// Dance-party overlays while a record is playing. The original disco show is
+// unchanged; a new show is picked at random each time a song starts.
+// A hidden `?show=` (or `?party=`) query can force one for testing; it is not
+// shown in the UI.
+// Drawn in room iso space after the furniture (window treatments are drawn
+// earlier, over the pane).
 
 import { TAU, type Hand } from './press.ts'
 import { WALL_H } from './world.ts'
+import { crtScreenQuad } from './crt.ts'
+import type { Kind } from './kinds.ts'
+import type { Item } from '../types.ts'
 
 export function prefersReducedMotion() {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+export const PARTY_SHOWS = ['disco', 'neon', 'starry', 'rave', 'blossom'] as const
+export type PartyShow = (typeof PARTY_SHOWS)[number]
+
+const SHOW_ALIAS: Record<string, PartyShow> = {
+  disco: 'disco',
+  neon: 'neon',
+  'neon-arcade': 'neon',
+  arcade: 'neon',
+  starry: 'starry',
+  'starry-night': 'starry',
+  night: 'starry',
+  rave: 'rave',
+  blossom: 'blossom',
+  cherry: 'blossom',
+  'cherry-blossom': 'blossom',
+  petals: 'blossom',
+}
+
+export function partyShowFromQuery(search = typeof location !== 'undefined' ? location.search : ''): PartyShow | null {
+  const q = new URLSearchParams(search.startsWith('?') ? search : `?${search}`)
+  const raw = (q.get('show') || q.get('party') || '').toLowerCase().trim()
+  return SHOW_ALIAS[raw] ?? null
+}
+
+export function pickPartyShow(rand = Math.random): PartyShow {
+  return PARTY_SHOWS[Math.floor(rand() * PARTY_SHOWS.length)]!
+}
+
+export function partyChangesWindow(show: PartyShow | null) {
+  return show === 'starry' || show === 'blossom'
+}
+
+export function partyFlashesCrt(show: PartyShow | null) {
+  return show === 'neon'
 }
 
 const HOOK_Z = WALL_H + 1.38
@@ -14,8 +56,77 @@ const BALL_Z = 2.18
 const BALL_RX = 17.5
 const BALL_RY = 15
 
-export function drawParty(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
+type Pt = [number, number]
+
+function roomPolys(H: Hand) {
+  const floor: Pt[] = [H.p(0, 0, 0), H.p(9, 0, 0), H.p(9, 9, 0), H.p(0, 9, 0)]
+  const nw: Pt[] = [H.p(0, 0, 0), H.p(0, 9, 0), H.p(0, 9, WALL_H), H.p(0, 0, WALL_H)]
+  const ne: Pt[] = [H.p(0, 0, 0), H.p(9, 0, 0), H.p(9, 0, WALL_H), H.p(0, 0, WALL_H)]
+  return { floor, nw, ne, walls: [nw, ne] as Pt[][] }
+}
+
+function path(ctx: CanvasRenderingContext2D, pts: Pt[]) {
+  ctx.beginPath()
+  pts.forEach((p, n) => (n ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
+  ctx.closePath()
+}
+
+function fillPoly(ctx: CanvasRenderingContext2D, pts: Pt[], fill: string) {
+  path(ctx, pts)
+  ctx.fillStyle = fill
+  ctx.fill()
+}
+
+function clipMany(ctx: CanvasRenderingContext2D, list: Pt[][], fn: () => void) {
+  ctx.save()
+  ctx.beginPath()
+  for (const pts of list) {
+    pts.forEach((p, n) => (n ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
+    ctx.closePath()
+  }
+  ctx.clip()
+  fn()
+  ctx.restore()
+}
+
+export function drawParty(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean, show: PartyShow = 'disco') {
   if (alpha <= 0.01) return
+  if (show === 'neon') return drawNeon(H, t, alpha, rug, reduced)
+  if (show === 'starry') return drawStarry(H, t, alpha, rug, reduced)
+  if (show === 'rave') return drawRave(H, t, alpha, rug, reduced)
+  if (show === 'blossom') return drawBlossom(H, t, alpha, rug, reduced)
+  drawDisco(H, t, alpha, rug, reduced)
+}
+
+export function drawPartyWindow(H: Hand, pane: Pt[], t: number, alpha: number, show: PartyShow, reduced: boolean) {
+  if (alpha <= 0.01) return
+  if (show === 'starry') drawStarryWindow(H, pane, t, alpha, reduced)
+  else if (show === 'blossom') drawBlossomWindow(H, pane, t, alpha)
+}
+
+export function drawPartyCrt(H: Hand, item: Item, kind: Kind, t: number, alpha: number, reduced: boolean) {
+  if (alpha <= 0.01) return
+  const quad = crtScreenQuad(H, item, kind)
+  const ctx = H.ctx()
+  const beat = reduced ? 0.7 : 0.55 + 0.45 * Math.max(0, Math.sin(t * 4.6))
+  const pink = Math.sin(t * 2.4) > 0
+  const rgb = pink ? '255,70,180' : '40,230,255'
+  ctx.save()
+  ctx.globalAlpha = alpha
+  path(ctx, quad)
+  ctx.fillStyle = `rgba(${rgb},${0.55 + beat * 0.4})`
+  ctx.fill()
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.fillStyle = `rgba(255,255,255,${0.2 * beat})`
+  ctx.fill()
+  ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Disco (original show, kept as-is)
+// ---------------------------------------------------------------------------
+
+function drawDisco(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
   const ctx = H.ctx()
   const floor = [H.p(0, 0, 0), H.p(9, 0, 0), H.p(9, 9, 0), H.p(0, 9, 0)]
   // Hang over the back-left of the rug so the chain rises through the
@@ -226,5 +337,324 @@ function drawSpark(ctx: CanvasRenderingContext2D, x: number, y: number, r: numbe
   ctx.lineTo(x, y - r * 0.28)
   ctx.closePath()
   ctx.fill()
+  ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Neon arcade
+// ---------------------------------------------------------------------------
+
+function drawNeon(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
+  const ctx = H.ctx()
+  const { floor, walls } = roomPolys(H)
+  ctx.save()
+  ctx.globalAlpha = alpha
+  fillPoly(ctx, floor, 'rgba(18, 4, 28, 0.22)')
+  for (const w of walls) fillPoly(ctx, w, 'rgba(12, 2, 24, 0.16)')
+
+  const sweep = reduced ? 0 : (t * 26) % 14
+  clipMany(ctx, walls, () => {
+    let y = -80 + sweep
+    let n = 0
+    while (y < 420) {
+      ctx.fillStyle = n % 2 ? 'rgba(255, 50, 190, 0.32)' : 'rgba(30, 230, 255, 0.3)'
+      ctx.fillRect(-80, y, 900, 2.8)
+      y += 8
+      n++
+    }
+  })
+
+  const pixels = reduced ? 12 : 28
+  ctx.globalCompositeOperation = 'lighter'
+  for (let n = 0; n < pixels; n++) {
+    const side = n % 2
+    const u = ((n * 1.73) % 1) * 8.4 + 0.3
+    const z = 0.55 + ((n * 0.37) % 1) * 1.85
+    const p = side ? H.p(u, 0.08, z) : H.p(0.08, u, z)
+    const blink = reduced ? 0.7 : 0.35 + 0.65 * Math.max(0, Math.sin(t * (2.2 + (n % 4) * 0.4) + n * 1.9))
+    if (blink < 0.28) continue
+    const rgb = n % 3 === 0 ? '255,80,200' : n % 3 === 1 ? '40,240,255' : '255,255,210'
+    ctx.fillStyle = `rgba(${rgb},${0.75 * blink})`
+    const s = 3.2 + (n % 3) * 0.8
+    ctx.fillRect(p[0] - s / 2, p[1] - s / 2, s, s)
+  }
+  // A couple of soft floor glows so the room still feels lit for the dance.
+  const mid = H.p(rug.i, rug.j, 0)
+  for (let k = 0; k < 3; k++) {
+    const ang = t * 0.5 + k * 2.1
+    const land = H.p(rug.i + Math.cos(ang) * 1.4, rug.j + Math.sin(ang) * 1.4, 0)
+    const rgb = k % 2 ? '255,60,190' : '40,220,255'
+    const g = ctx.createRadialGradient(land[0], land[1], 2, land[0], land[1], 54)
+    g.addColorStop(0, `rgba(${rgb},${reduced ? 0.2 : 0.3})`)
+    g.addColorStop(1, `rgba(${rgb},0)`)
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.ellipse(land[0], land[1], 50, 24, 0, 0, TAU)
+    ctx.fill()
+  }
+  void mid
+  ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Starry night
+// ---------------------------------------------------------------------------
+
+function drawStarry(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
+  const ctx = H.ctx()
+  const { floor, walls } = roomPolys(H)
+  ctx.save()
+  ctx.globalAlpha = alpha
+  fillPoly(ctx, floor, 'rgba(10, 12, 36, 0.46)')
+  for (const w of walls) fillPoly(ctx, w, 'rgba(8, 10, 32, 0.42)')
+
+  // Slow aurora on the back walls.
+  clipMany(ctx, walls, () => {
+    ctx.globalCompositeOperation = 'lighter'
+    const bands = [
+      { rgb: '70,200,190', y: 0.12, w: 70 },
+      { rgb: '150,90,210', y: 0.38, w: 80 },
+      { rgb: '255,140,190', y: 0.62, w: 64 },
+    ]
+    for (let i = 0; i < bands.length; i++) {
+      const b = bands[i]
+      const wave = reduced ? 0 : Math.sin(t * 0.35 + i * 1.1) * 16
+      const left = H.p(0, 0, WALL_H * (1 - b.y))
+      const right = H.p(9, 0, WALL_H * (1 - b.y))
+      const y = (left[1] + right[1]) / 2 + wave
+      const g = ctx.createLinearGradient(-40, y, 520, y + 10)
+      g.addColorStop(0, `rgba(${b.rgb},0)`)
+      g.addColorStop(0.3, `rgba(${b.rgb},0.22)`)
+      g.addColorStop(0.55, `rgba(${b.rgb},0.12)`)
+      g.addColorStop(1, `rgba(${b.rgb},0)`)
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.ellipse(240, y, 280, b.w / 2, -0.18, 0, TAU)
+      ctx.fill()
+    }
+  })
+
+  const stars = reduced ? 14 : 36
+  ctx.globalCompositeOperation = 'lighter'
+  for (let n = 0; n < stars; n++) {
+    const side = n % 3
+    const u = 0.25 + ((n * 2.127) % 1) * 8.5
+    const z = 1.15 + ((n * 0.61) % 1) * 1.4
+    const p = side === 0 ? H.p(u, 0.12, z) : side === 1 ? H.p(0.12, u, z) : H.p(1.2 + ((n * 0.41) % 1) * 6.4, 1.2 + ((n * 0.73) % 1) * 6.4, WALL_H + 0.15)
+    const tw = reduced ? 0.55 : 0.25 + 0.75 * Math.abs(Math.sin(t * (0.8 + (n % 5) * 0.15) + n))
+    if (tw < 0.18) continue
+    const r = 1.1 + (n % 4) * 0.35
+    drawSpark(ctx, p[0], p[1], r * tw, n % 4 === 0 ? '#ffd6ff' : '#fff8dc', 0.55 * tw)
+  }
+  // Soft pool of light on the rug so Hana stays readable.
+  const mid = H.p(rug.i, rug.j, 0)
+  const g = ctx.createRadialGradient(mid[0], mid[1], 4, mid[0], mid[1], 70)
+  g.addColorStop(0, 'rgba(170, 140, 220, 0.16)')
+  g.addColorStop(1, 'rgba(170, 140, 220, 0)')
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.ellipse(mid[0], mid[1], 66, 32, 0, 0, TAU)
+  ctx.fill()
+  ctx.restore()
+}
+
+function drawStarryWindow(H: Hand, pane: Pt[], t: number, alpha: number, reduced: boolean) {
+  const ctx = H.ctx()
+  const c = pane.reduce((a, p) => [a[0] + p[0] / pane.length, a[1] + p[1] / pane.length] as Pt, [0, 0])
+  ctx.save()
+  ctx.globalAlpha = alpha
+  path(ctx, pane)
+  ctx.clip()
+  const wash = ctx.createLinearGradient(c[0], c[1] - 28, c[0], c[1] + 24)
+  wash.addColorStop(0, '#14162e')
+  wash.addColorStop(1, '#2a2450')
+  ctx.fillStyle = wash
+  ctx.fill()
+  ctx.fillStyle = '#f4efe3'
+  ctx.beginPath()
+  ctx.arc(c[0] + 10, c[1] - 8, 5.2, 0, TAU)
+  ctx.fill()
+  ctx.fillStyle = '#1c1a38'
+  ctx.beginPath()
+  ctx.arc(c[0] + 12.4, c[1] - 8.4, 4.2, 0, TAU)
+  ctx.fill()
+  const n = reduced ? 6 : 11
+  for (let i = 0; i < n; i++) {
+    const x = c[0] + ((i * 17.13) % 40) - 20
+    const y = c[1] + ((i * 11.7) % 28) - 16
+    const tw = reduced ? 0.7 : 0.35 + 0.65 * Math.abs(Math.sin(t * 1.4 + i * 1.3))
+    ctx.globalAlpha = alpha * tw
+    ctx.fillStyle = '#f7f1d8'
+    ctx.beginPath()
+    ctx.arc(x, y, 0.7 + (i % 3) * 0.25, 0, TAU)
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Rave
+// ---------------------------------------------------------------------------
+
+function strobePulse(t: number, reduced: boolean) {
+  // Cap at ~3 flashes per second, short and fairly soft. No flashes when
+  // the visitor asked for less motion.
+  if (reduced) return 0
+  const rate = 2.8
+  const phase = (t * rate) % 1
+  return phase < 0.14 ? 1 - phase / 0.14 : 0
+}
+
+function drawRave(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
+  const ctx = H.ctx()
+  const { floor, walls } = roomPolys(H)
+  const colors = ['255,70,150', '70,230,255', '255,220,70', '180,90,255', '80,255,140']
+  const pulse = strobePulse(t, reduced)
+  const flashColor = colors[Math.floor(t * 2.8) % colors.length]
+
+  ctx.save()
+  ctx.globalAlpha = alpha
+  fillPoly(ctx, floor, 'rgba(10, 4, 20, 0.3)')
+  for (const w of walls) fillPoly(ctx, w, 'rgba(8, 2, 16, 0.18)')
+
+  if (pulse > 0.02) {
+    const a = 0.16 * pulse
+    fillPoly(ctx, floor, `rgba(${flashColor},${a})`)
+    for (const w of walls) fillPoly(ctx, w, `rgba(${flashColor},${a * 0.7})`)
+  }
+
+  ctx.globalCompositeOperation = 'lighter'
+  const corners: Array<[number, number, number]> = [
+    [0.15, 0.15, WALL_H - 0.15],
+    [8.85, 0.15, WALL_H - 0.2],
+    [0.15, 8.6, 1.6],
+    [8.85, 8.6, 1.5],
+  ]
+  const beams = reduced ? 4 : 8
+  for (let k = 0; k < beams; k++) {
+    const [i0, j0, z0] = corners[k % corners.length]
+    const ang = (reduced ? k * 0.7 : t * (0.55 + (k % 3) * 0.08)) + k * 1.15
+    const reach = 5 + (k % 3) * 1.4
+    const dest = H.p(4.5 + Math.cos(ang) * reach * 0.35, 4.5 + Math.sin(ang) * reach * 0.35, 0)
+    const origin = H.p(i0, j0, z0)
+    const rgb = colors[k % colors.length]
+    const beam = ctx.createLinearGradient(origin[0], origin[1], dest[0], dest[1])
+    beam.addColorStop(0, `rgba(${rgb},${reduced ? 0.18 : 0.36})`)
+    beam.addColorStop(0.7, `rgba(${rgb},0.08)`)
+    beam.addColorStop(1, `rgba(${rgb},0)`)
+    ctx.strokeStyle = beam
+    ctx.lineWidth = reduced ? 2.2 : 3.6
+    ctx.beginPath()
+    ctx.moveTo(origin[0], origin[1])
+    ctx.lineTo(dest[0], dest[1])
+    ctx.stroke()
+  }
+
+  const mid = H.p(rug.i, rug.j, 0)
+  const g = ctx.createRadialGradient(mid[0], mid[1], 4, mid[0], mid[1], 62)
+  g.addColorStop(0, `rgba(${colors[Math.floor(t) % colors.length]},${reduced ? 0.18 : 0.28})`)
+  g.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.ellipse(mid[0], mid[1], 58, 28, 0, 0, TAU)
+  ctx.fill()
+  ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Cherry blossom
+// ---------------------------------------------------------------------------
+
+function drawBlossom(H: Hand, t: number, alpha: number, rug: { i: number; j: number }, reduced: boolean) {
+  const ctx = H.ctx()
+  const { floor, walls } = roomPolys(H)
+  ctx.save()
+  ctx.globalAlpha = alpha
+  fillPoly(ctx, floor, 'rgba(255, 186, 196, 0.18)')
+  for (const w of walls) fillPoly(ctx, w, 'rgba(255, 170, 170, 0.1)')
+
+  const mid = H.p(rug.i, rug.j, 0)
+  const glow = ctx.createRadialGradient(mid[0], mid[1], 6, mid[0], mid[1], 90)
+  glow.addColorStop(0, 'rgba(255, 200, 170, 0.22)')
+  glow.addColorStop(1, 'rgba(255, 200, 170, 0)')
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.ellipse(mid[0], mid[1], 86, 42, 0, 0, TAU)
+  ctx.fill()
+
+  const petals = reduced ? 10 : 22
+  for (let n = 0; n < petals; n++) {
+    const cycle = 5.5 + (n % 5) * 0.7
+    const u = (t / cycle + n * 0.137) % 1
+    const fall = 0.72
+    const startI = 0.8 + ((n * 1.91) % 1) * 7.4
+    const startJ = 0.6 + ((n * 1.27) % 1) * 7.6
+    const landI = rug.i + Math.cos(n * 1.7) * (0.35 + (n % 5) * 0.22)
+    const landJ = rug.j + Math.sin(n * 1.3) * (0.3 + (n % 4) * 0.2)
+    const drift = reduced ? 0 : Math.sin(t * 0.9 + n) * 0.35
+    let i: number
+    let j: number
+    let z: number
+    if (u < fall) {
+      const p = u / fall
+      const ease = p * p * (3 - 2 * p)
+      i = startI + (landI - startI) * ease + drift * (1 - p)
+      j = startJ + (landJ - startJ) * ease
+      z = WALL_H * (1 - p) + 0.02
+    } else {
+      i = landI + (reduced ? 0 : Math.sin(t * 0.5 + n) * 0.03)
+      j = landJ
+      z = 0.02
+    }
+    const pt = H.p(i, j, z)
+    const rot = n * 0.7 + t * (reduced ? 0.15 : 0.6)
+    const col = n % 3 === 0 ? 'rgba(255, 214, 220, 0.9)' : n % 3 === 1 ? 'rgba(247, 176, 186, 0.9)' : 'rgba(255, 236, 232, 0.92)'
+    drawPetal(ctx, pt[0], pt[1], 4.2 + (n % 3), rot, col)
+  }
+  ctx.restore()
+}
+
+function drawPetal(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, rot: number, fill: string) {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(rot)
+  ctx.beginPath()
+  ctx.ellipse(0, 0, r * 0.55, r, 0, 0, TAU)
+  ctx.fillStyle = fill
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(43, 38, 34, 0.28)'
+  ctx.lineWidth = 0.6
+  ctx.stroke()
+  ctx.restore()
+}
+
+function drawBlossomWindow(H: Hand, pane: Pt[], t: number, alpha: number) {
+  const ctx = H.ctx()
+  const c = pane.reduce((a, p) => [a[0] + p[0] / pane.length, a[1] + p[1] / pane.length] as Pt, [0, 0])
+  ctx.save()
+  ctx.globalAlpha = alpha
+  path(ctx, pane)
+  ctx.clip()
+  const wash = ctx.createLinearGradient(c[0], c[1] - 26, c[0], c[1] + 22)
+  wash.addColorStop(0, '#f3b07a')
+  wash.addColorStop(0.45, '#e8896a')
+  wash.addColorStop(1, '#c45e62')
+  ctx.fillStyle = wash
+  ctx.fill()
+  const sunY = c[1] + 8
+  const sunX = c[0] + 12
+  const glow = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 22)
+  glow.addColorStop(0, 'rgba(255, 220, 140, 0.95)')
+  glow.addColorStop(0.45, 'rgba(255, 170, 90, 0.55)')
+  glow.addColorStop(1, 'rgba(255, 140, 80, 0)')
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(sunX, sunY, 22, 0, TAU)
+  ctx.fill()
+  ctx.fillStyle = '#f3c56a'
+  ctx.beginPath()
+  ctx.arc(sunX, sunY, 6.5, 0, TAU)
+  ctx.fill()
+  void t
   ctx.restore()
 }

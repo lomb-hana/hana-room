@@ -341,7 +341,7 @@ function publicMessage(m) {
     text: m.text,
     ts: m.ts,
     reply: m.reply ? { text: m.reply.text, ts: m.reply.ts } : null,
-    ack: m.reply ? null : m.ack || 'Hana will read this later',
+    ack: m.reply ? null : m.ack || 'Hana is reading your message…',
   }
 }
 
@@ -597,7 +597,7 @@ const server = http.createServer(async (req, res) => {
       text,
       ts: new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z'),
       reply: null,
-      ack: 'Hana will read this later',
+      ack: 'Hana is reading your message…',
     }
     messages.messages.push(msg)
     if (messages.messages.length > MAX_CHAT) messages.messages = messages.messages.slice(-MAX_CHAT)
@@ -606,7 +606,7 @@ const server = http.createServer(async (req, res) => {
     globalTimes.push(now)
     const forwarded = await forwardChat({ id: msg.id, name: msg.name, text: msg.text, ts: msg.ts })
     const out = publicMessage(msg)
-    if (!process.env.FORWARD_WEBHOOK_URL || !forwarded) out.message = 'Hana will read this later'
+    if (!process.env.FORWARD_WEBHOOK_URL || !forwarded) out.message = 'Hana is reading your message…'
     return send(res, 200, out)
   }
 

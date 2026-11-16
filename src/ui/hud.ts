@@ -270,7 +270,7 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
         empty ? null : textNode,
         empty ? null : more,
         card ? cardButtons(id, card) : null,
-        content.mine ? el('div', { class: 'note', textContent: 'Hana will read this later' }) : null,
+        content.mine ? el('div', { class: 'note', textContent: 'Hana is reading your message…' }) : null,
         form,
         el('button', {
           class: 'close',

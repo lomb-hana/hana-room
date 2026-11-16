@@ -80,6 +80,17 @@ function terminal(t: number) {
   return term
 }
 
+export function crtScreenQuad(H: Hand, item: Item, kind: Kind, lift = 0.005) {
+  const pl = placer(item.at, sizeOf(kind, item))
+  const { u, v, z, w, h, inset } = PANEL
+  const onPlane = (a: number, b: number, dv = 0) => H.p(...pl.W(a, v + dv, b))
+  const a0 = u + inset
+  const b0 = z + inset
+  const a1 = u + w - inset
+  const b1 = z + h - inset
+  return [onPlane(a0, b0, lift), onPlane(a1, b0, lift), onPlane(a1, b1, lift), onPlane(a0, b1, lift)]
+}
+
 export function drawCrtScreen(H: Hand, item: Item, kind: Kind, t: number, on: boolean) {
   if (!on) return
   const pl = placer(item.at, sizeOf(kind, item))

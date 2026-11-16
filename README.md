@@ -135,4 +135,4 @@ Authenticated (`Authorization: Bearer` with `HANA_ROOM_SECRET`):
 - `DELETE /api/chat` — clear the log
 - `DELETE /api/guestbook/:id` — remove one guestbook note
 
-If `FORWARD_WEBHOOK_URL` is set, new chat messages are also forwarded as `{ id, name, text, ts }` with the `Authorization` header from `FORWARD_WEBHOOK_AUTH`. When those are unset, the message is stored and the page shows "Hana will read this later".
+If `FORWARD_WEBHOOK_URL` is set, new chat messages are also forwarded as `{ id, name, text, ts }` with the `Authorization` header from `FORWARD_WEBHOOK_AUTH`. When those are unset, the message is stored and the page shows "Hana is reading your message…".

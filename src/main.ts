@@ -87,7 +87,7 @@ const viewer = createViewer({
     select(pick?.botId ?? null, { focus: !pick?.bot })
   },
 })
-viewer.setMusic(() => records.isPlaying())
+viewer.setMusic(() => records.isPlaying(), () => records.startGen())
 const hud = createHud({
   layer: document.querySelector('#layer')!,
   topbar: document.querySelector('#topbar')!,
@@ -150,7 +150,7 @@ function feedOf(list: ChatMessage[]): FeedItem[] {
       const rt = Date.parse(m.reply.ts) || at + 1
       items.push({ id: `${m.id}-reply`, seq, updated: seq, at: rt, who: 'bot', kind: 'text', text: m.reply.text, tool: null, app: null, card: null })
     } else {
-      items.push({ id: `${m.id}-reply`, seq, updated: seq, at: at + 1, who: 'bot', kind: 'text', text: m.ack || 'Hana will read this later', tool: null, app: null, card: null })
+      items.push({ id: `${m.id}-reply`, seq, updated: seq, at: at + 1, who: 'bot', kind: 'text', text: m.ack || 'Hana is reading your message…', tool: null, app: null, card: null })
     }
   }
   return items

@@ -11,8 +11,8 @@ import { drawBase, layerOf } from '../engine/scene.ts'
 import { CRT_KIND, drawCrtScreen } from '../engine/crt.ts'
 import { RECORD_KIND, drawPlayingRecord } from '../engine/turntable.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
-import { createActor, poke, poseOf, setDancing, setLive, step, type Actor } from './actors.ts'
-import { drawParty, prefersReducedMotion } from '../engine/party.ts'
+import { createActor, poke, poseOf, setDanceHard, setDancing, setLive, step, type Actor } from './actors.ts'
+import { drawParty, drawPartyCrt, drawPartyWindow, partyChangesWindow, partyFlashesCrt, partyShowFromQuery, pickPartyShow, prefersReducedMotion, type PartyShow } from '../engine/party.ts'
 import type { RoomPlan } from '../layout.ts'
 import type { Item } from '../types.ts'
 import type { Presence } from '../state.ts'
@@ -59,6 +59,10 @@ export type PickHit = { botId: string; bot: boolean; item?: string }
 
 export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage: HTMLCanvasElement; onPick: (pick: PickHit | null) => void }) {
   let musicOn = () => false
+  let musicStartGen = () => 0
+  let lastStartGen = -1
+  let partyShow: PartyShow | null = null
+  let showT0 = 0
   let party = 0
   let sky: SkyState = skyNow()
   let board: BoardData | null = null
@@ -238,7 +242,11 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
       const rainH = mkHand(ctx, { seed: 8, fine: true })
       for (const win of R.plan.room.windows || []) {
-        drawRain(rainH, windowPane(rainH, win.side, win.pos, win.z ?? 1, win.w ?? 1.6, win.h ?? 1.2), t, sky, prefersReducedMotion())
+        const pane = windowPane(rainH, win.side, win.pos, win.z ?? 1, win.w ?? 1.6, win.h ?? 1.2)
+        drawRain(rainH, pane, t, sky, prefersReducedMotion())
+        if (party > 0.01 && partyShow && partyChangesWindow(partyShow)) {
+          drawPartyWindow(rainH, pane, Math.max(0, t - showT0), party, partyShow, prefersReducedMotion())
+        }
       }
       const boardItem = R.plan.items.find((it) => it.kind === 'corkboard')
       if (board && boardItem && kinds.corkboard) drawBoardPins(rainH, boardItem, kinds.corkboard, board)
@@ -266,7 +274,11 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
           const lit = actors.get(R.plan.botId)?.mood === 'work'
           ctx.save()
           ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
-          drawCrtScreen(mkHand(ctx, { seed: 2, fine: true }), th.it!, kinds[th.it!.kind], t, lit)
+          const crtH = mkHand(ctx, { seed: 2, fine: true })
+          drawCrtScreen(crtH, th.it!, kinds[th.it!.kind], t, lit)
+          if (party > 0.01 && partyShow && partyFlashesCrt(partyShow)) {
+            drawPartyCrt(crtH, th.it!, kinds[th.it!.kind], Math.max(0, t - showT0), party, prefersReducedMotion())
+          }
           ctx.restore()
         }
         if (th.it!.kind === RECORD_KIND && (musicOn() || party > 0.02)) {
@@ -280,7 +292,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
         const dance = R.plan.dance
         ctx.save()
         ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
-        drawParty(mkHand(ctx, { seed: 7, fine: true }), t, party, { i: dance.i, j: dance.j }, prefersReducedMotion())
+        if (partyShow) drawParty(mkHand(ctx, { seed: 7, fine: true }), Math.max(0, t - showT0), party, { i: dance.i, j: dance.j }, prefersReducedMotion(), partyShow)
         ctx.restore()
       }
       const dim = dimOf(sky.period, sky.weather)
@@ -491,13 +503,24 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     }
     const wall = performance.now()
     const playing = musicOn()
+    const gen = musicStartGen()
+    if (playing && gen !== lastStartGen) {
+      lastStartGen = gen
+      partyShow = partyShowFromQuery() ?? pickPartyShow()
+      showT0 = clock
+    }
     const want = playing ? 1 : 0
     const reduced = prefersReducedMotion()
     if (reduced) party = want
     else party += (want - party) * Math.min(1, dt / (want ? 0.4 : 0.7))
-    if (party < 0.01 && !want) party = 0
+    if (party < 0.01 && !want) {
+      party = 0
+      partyShow = null
+      lastStartGen = -1
+    }
     for (const a of actors.values()) {
       setDancing(a, playing, wall)
+      setDanceHard(a, Boolean(playing && partyShow === 'rave'))
       step(a, dt, wall)
     }
     draw(clock)
@@ -534,8 +557,9 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       }
       if (!userCam) fit(false)
     },
-    setMusic(fn: () => boolean) {
-      musicOn = fn
+    setMusic(isPlaying: () => boolean, startGen: () => number = () => 0) {
+      musicOn = isPlaying
+      musicStartGen = startGen
     },
     setSky(next: SkyState) {
       const prev = skyKey(sky)

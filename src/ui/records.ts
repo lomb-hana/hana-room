@@ -52,12 +52,14 @@ export function createRecords({ host, onPlay }: { host: HTMLElement; onPlay?: (p
   let playing = false
   let open = false
   let raf = 0
+  let startGen = 0
 
   const idOf = (song: Song) => song.file
 
   function setPlaying(next: boolean) {
     if (playing === next) return
     playing = next
+    if (next) startGen += 1
     onPlay?.(playing)
   }
 
@@ -162,6 +164,7 @@ export function createRecords({ host, onPlay }: { host: HTMLElement; onPlay?: (p
   function restartTrack(song: Song) {
     loadTrack(song)
     audio.currentTime = 0
+    startGen += 1
     void playTrack(song)
   }
 
@@ -235,6 +238,7 @@ export function createRecords({ host, onPlay }: { host: HTMLElement; onPlay?: (p
     close: hide,
     isOpen: () => open,
     isPlaying: () => playing,
+    startGen: () => startGen,
     audio,
     load: loadSongs,
   }
