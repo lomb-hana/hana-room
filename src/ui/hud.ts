@@ -173,8 +173,7 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
     const status = statusOf(mood, hana?.presence)
     const detail = status.detail && status.detail.trim().toLowerCase() !== status.label.trim().toLowerCase() ? ` · ${status.detail}` : ''
     brandSub.replaceChildren(
-      document.createTextNode(status.label ? `${status.label}${detail} · ` : ''),
-      el('a', { href: 'https://github.com/remorses/grokhouse', target: '_blank', rel: 'noopener', textContent: 'based on grokhouse' }),
+      document.createTextNode(status.label ? `${status.label}${detail}` : ''),
     )
     put(account)
     signin?.remove()

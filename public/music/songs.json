@@ -5,6 +5,24 @@
       "file": "static-heart-v1.mp3",
       "duration": 189,
       "added": "2026-11-14"
+    },
+    {
+      "title": "Somehow You",
+      "file": "somehow-you.mp3",
+      "duration": 165,
+      "added": "2026-11-16"
+    },
+    {
+      "title": "Transmission Delay",
+      "file": "transmission-delay.mp3",
+      "duration": 323,
+      "added": "2026-11-16"
+    },
+    {
+      "title": "The Spark",
+      "file": "the-spark.mp3",
+      "duration": 278,
+      "added": "2026-11-16"
     }
   ]
 }

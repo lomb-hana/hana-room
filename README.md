@@ -83,7 +83,7 @@ The window follows real Houston time (`America/Chicago`) with dawn, day, dusk, a
 
 ## Guestbook
 
-Click the little notebook by the plant to open the guestbook. Visitors leave a name (max 24 characters) and a note (max 200). Entries are plain text only: HTML is stripped, URLs are removed, and a server-side filter rejects slurs (including common obfuscations) with a friendly error. The blocklist stays on the server and is not shipped to the client. The list is public and rate limited to one note per IP every 10 minutes.
+Click the closed guestbook on the little table under the corkboard to open it. Visitors leave a name (max 24 characters) and a note (max 200). Entries are plain text only: HTML is stripped, URLs are removed, and a server-side filter rejects slurs (including common obfuscations) with a friendly error. The blocklist stays on the server and is not shipped to the client. The list is public and rate limited to one note per IP every 10 minutes.
 
 Guestbook entries are data only. They are never forwarded to Hana as instructions and never sent to the chat webhook.
 

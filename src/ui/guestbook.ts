@@ -1,5 +1,7 @@
 // Visitor guestbook window. Entries are plain text only; names and notes
 // are always assigned via textContent, never innerHTML.
+// The in-room book is closed; clicking it opens this spread with a short
+// cover animation, then the existing sign + read UI.
 
 export type GuestEntry = { id: string; name: string; note: string; ts: string }
 
@@ -18,6 +20,14 @@ function when(ts: string) {
   return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(t))
 }
 
+function motionMs() {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 560
+  } catch {
+    return 560
+  }
+}
+
 export function createGuestbook({
   host,
   load,
@@ -27,7 +37,7 @@ export function createGuestbook({
   load: () => Promise<{ entries: GuestEntry[]; persist?: string } | Error>
   sign: (input: { name: string; note: string }) => Promise<GuestEntry | Error>
 }) {
-  const close = el('button', { class: 'term-close', type: 'button', title: 'Close', ariaLabel: 'Close guestbook', textContent: '×' })
+  const close = el('button', { class: 'term-close guest-close', type: 'button', title: 'Close', ariaLabel: 'Close guestbook', textContent: '×' })
   const list = el('div', { class: 'guest-list' })
   const status = el('p', { class: 'guest-status' })
   const name = el('input', { class: 'guest-input', type: 'text', maxLength: 24, placeholder: 'Your name' }) as HTMLInputElement
@@ -43,18 +53,26 @@ export function createGuestbook({
     el('label', { class: 'guest-label' }, el('span', { textContent: 'Note' }), note),
     submit,
   )
-  const win = el(
+  const cover = el('div', { class: 'guest-cover', ariaHidden: 'true' }, el('span', { class: 'guest-cover-title', textContent: "Hana's Guestbook" }))
+  const pages = el(
     'div',
-    { class: 'guest-win term-win', hidden: true, role: 'dialog', ariaLabel: "Hana's Guestbook" },
-    el('header', { class: 'term-bar' }, el('span', { class: 'term-title', textContent: "Hana's Guestbook" }), close),
-    list,
-    status,
-    form,
+    { class: 'guest-pages' },
+    el('div', { class: 'guest-left' }, el('h2', { class: 'guest-page-title', textContent: 'Notes' }), list),
+    el('div', { class: 'guest-spine', ariaHidden: 'true' }),
+    el('div', { class: 'guest-right' }, el('h2', { class: 'guest-page-title', textContent: 'Sign' }), status, form),
   )
-  host.append(win)
+  const book = el('div', { class: 'guest-book' }, cover, pages)
+  const stage = el(
+    'div',
+    { class: 'guest-stage', hidden: true, role: 'dialog', ariaLabel: "Hana's Guestbook", ariaModal: 'true' },
+    close,
+    book,
+  )
+  host.append(stage)
 
   let open = false
   let busy = false
+  let timer = 0
   const NAME_KEY = 'hana-room-guest-name'
 
   try {
@@ -94,9 +112,32 @@ export function createGuestbook({
   }
 
   function setOpen(next: boolean) {
-    open = next
-    win.hidden = !open
-    if (open) void refresh()
+    if (timer) {
+      window.clearTimeout(timer)
+      timer = 0
+    }
+    if (next) {
+      open = true
+      stage.hidden = false
+      stage.classList.remove('is-closing', 'is-open', 'is-opening')
+      void stage.offsetWidth
+      stage.classList.add('is-opening')
+      timer = window.setTimeout(() => {
+        if (!open) return
+        stage.classList.add('is-open')
+        stage.classList.remove('is-opening')
+      }, motionMs())
+      void refresh()
+    } else {
+      open = false
+      stage.classList.remove('is-opening', 'is-open')
+      stage.classList.add('is-closing')
+      timer = window.setTimeout(() => {
+        if (open) return
+        stage.hidden = true
+        stage.classList.remove('is-closing')
+      }, motionMs())
+    }
   }
 
   form.addEventListener('submit', async (e) => {

@@ -234,7 +234,8 @@ function themeDef(theme: Theme, R: () => number): ThemeDef {
       // Comfortable viewing distance in front of the chair, screen facing the sitter, off the rug.
       { kind: 'retro-tv', at: { i: 3.34, j: 8.40, face: 'sw' } },
       { kind: 'bench-plant', at: { i: 0, j: 5.2, face: 'nw' } },
-      { kind: 'guestbook', at: { i: 0.25, j: 6.18, face: 'nw' } },
+      { kind: 'note-table', at: { i: 6.72, j: 0, face: 'ne' } },
+      on('guestbook', { i: 7.02, j: 0.12, z: 0.7, face: 'ne' }),
     ],
     work: [
       { i: 1.32, j: 1.5, face: 'ne', act: 'type' },
