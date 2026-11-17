@@ -481,6 +481,8 @@ textarea {
   place-items: center;
   box-shadow: none;
   transition: transform 0.2s var(--pop);
+  z-index: 2;
+  pointer-events: auto;
 }
 .bubble .close:hover {
   transform: rotate(90deg) scale(1.15);
@@ -855,6 +857,96 @@ textarea {
 }
 .composer textarea:focus {
   box-shadow: 0 0 0 3px #e8b65466;
+}
+.composer-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.composer-wrap[hidden],
+.chat-name[hidden] {
+  display: none !important;
+}
+.chat-name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border-top: 2px dashed #d9c6ad;
+}
+.bubble .chat-name {
+  padding: 0;
+  border-top: 0;
+  margin-top: 8px;
+}
+.bubble:hover .chat-name,
+.bubble:focus-within .chat-name,
+.bubble.is-selected .chat-name {
+  display: flex;
+  flex-direction: column;
+}
+.chat-name-lead {
+  margin: 0;
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.chat-name-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.chat-name-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 4px 9px;
+  font-family: var(--hand);
+  font-size: 16px;
+  background: var(--paper-2, var(--card));
+  outline: none;
+}
+.chat-name-row input:focus {
+  box-shadow: 0 0 0 3px #e8b65466;
+}
+.chat-name-err {
+  margin: 0;
+  font-family: var(--ui);
+  font-size: 12px;
+  color: var(--coral, #d06);
+}
+.chat-compose {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.bubble:hover .chat-compose,
+.bubble:focus-within .chat-compose,
+.bubble.is-selected .chat-compose {
+  display: flex;
+}
+.chat-as {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-family: var(--ui);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.composer-wrap .chat-as {
+  padding: 8px 12px 0;
+}
+.chat-as-change {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--coral, #d06);
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 11.5px;
+  cursor: pointer;
 }
 
 /* ---------------- toasts ---------------- */

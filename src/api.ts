@@ -91,8 +91,9 @@ async function request<T>({ path, method = 'GET', body }: { path: string; method
 export const api = {
   status: () => request<RoomStatus>({ path: '/api/status' }),
   chat: () => request<{ messages: ChatMessage[] }>({ path: '/api/chat' }),
-  send: ({ name, text }: { name?: string; text: string }) =>
+  send: ({ name, text }: { name: string; text: string }) =>
     request<ChatMessage & { message?: string }>({ path: '/api/chat', method: 'POST', body: { name, text } }),
+  checkName: (name: string) => request<{ name: string }>({ path: '/api/chat/name', method: 'POST', body: { name } }),
   activity: () => request<ActivityFeed>({ path: '/api/activity' }),
   sky: () => request<SkyPayload>({ path: '/api/sky' }),
   board: async () => {

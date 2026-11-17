@@ -24,6 +24,7 @@ import { createViewer } from './scene/viewer.ts'
 import { createHud, type View } from './ui/hud.ts'
 import { createSound } from './sound.ts'
 import { botById, bubbleOf, createEventLog, latestBotMessage, pendingSent, presenceOf, reduce, type OfficeEvent, type OfficeState } from './state.ts'
+import { checkNameLocal, normalizeName, readStoredName, writeStoredName } from './chat-name.ts'
 import type { FeedItem, Live, OfficeSnapshot, ReadState } from './protocol.ts'
 
 const HANA_ID = 'hana'
@@ -33,8 +34,6 @@ const POLL_ACTIVITY_MS = 10_000
 const STALE_MS = 30 * 60 * 1000
 const STATES = new Set<RoomState>(['working', 'free-time', 'idle', 'waiting'])
 const READ_KEY = 'hana-room-read-at'
-const NAME_KEY = 'hana-room-name'
-
 const view = document.querySelector<HTMLElement>('#view')!
 const stage = document.querySelector<HTMLCanvasElement>('#stage')!
 
@@ -103,6 +102,8 @@ const hud = createHud({
     answer: async () => true,
     interrupt: async () => hud.toast('This page is chat-only.'),
     closeBubble,
+    getName: readStoredName,
+    setName,
     openBubble: (botId, entryId) => {
       sound.play('tap', { pitch: 3 })
       dispatch({ type: 'bubble.opened', botId, entryId })
@@ -145,7 +146,10 @@ function feedOf(list: ChatMessage[]): FeedItem[] {
   for (const m of list) {
     const at = Date.parse(m.ts) || Date.now()
     seq += 1
-    items.push({ id: m.id, seq, updated: seq, at, who: m.name ? 'other' : 'user', kind: 'text', text: m.name ? `${m.name}: ${m.text}` : m.text, tool: null, app: null, card: null })
+    const mine = Boolean(m.name) && m.name === readStoredName()
+    const who = mine || !m.name ? 'user' : 'other'
+    const text = m.name && !mine ? `${m.name}: ${m.text}` : m.text
+    items.push({ id: m.id, seq, updated: seq, at, who, kind: 'text', text, tool: null, app: null, card: null })
     seq += 1
     if (m.reply?.text) {
       const rt = Date.parse(m.reply.ts) || at + 1
@@ -246,18 +250,37 @@ function closeBubble(botId: string) {
   const bot = botById(store.getState(), botId)
   const item = bot ? latestBotMessage(bot) : null
   sound.play('page')
-  dispatch({ type: 'bubble.closed', botId })
+  const events: OfficeEvent[] = [{ type: 'bubble.closed', botId }]
+  if (store.getState().selected === botId) events.push({ type: 'bot.selected', botId: null })
+  dispatch(...events)
   if (item) {
     markReadLocal(item.at)
     dispatch({ type: 'watch', event: { type: 'read', botId, read: { at: Date.now(), lastViewedAt: item.at, lastActivityAt: item.at, lastEntryId: item.id, unread: 0 } } })
   }
 }
 
+async function setName(raw: string) {
+  const local = checkNameLocal(raw)
+  if (local) return new Error(local)
+  const name = normalizeName(raw)
+  const result = await api.checkName(name)
+  if (result instanceof Error) return result
+  const saved = normalizeName(result.name || name)
+  if (!saved) return new Error('Pick a name between 2 and 20 characters.')
+  writeStoredName(saved)
+  applyOffice()
+  return saved
+}
+
 async function send(_botId: string, text: string) {
+  const name = readStoredName()
+  if (!name) {
+    hud.toast('Pick a name before you chat.')
+    return false
+  }
   const sent = { id: crypto.randomUUID(), text, at: Date.now() }
   sound.play('send')
   dispatch({ type: 'message.sent', botId: HANA_ID, sent })
-  const name = localStorage.getItem(NAME_KEY) || undefined
   const result = await api.send({ name, text })
   if (result instanceof Error) {
     dispatch({ type: 'message.failed', botId: HANA_ID, id: sent.id })

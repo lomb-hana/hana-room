@@ -208,7 +208,7 @@ export function bubbleOf(state: OfficeState, bot: Bot): Bubble | null {
     return null
   }
   const unread = item.at > (bot.read.lastViewedAt ?? 0)
-  const visible = unread || state.opened[bot.bot.id] === item.id || state.selected === bot.bot.id
+  const visible = unread || state.opened[bot.bot.id] === item.id
   return { key: item.id, mine: false, item, text: cardText(item) || item.text, at: item.at, card: item.card, unread, visible }
 }
 

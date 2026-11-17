@@ -25,7 +25,8 @@ const STATES = new Set(['working', 'free-time', 'idle', 'waiting'])
 const MAX_TEXT = 300
 const MAX_LABEL = 60
 const STALE_WORK_MS = 45 * 60 * 1000
-const MAX_NAME = 40
+const CHAT_NAME_MIN = 2
+const CHAT_NAME_MAX = 20
 const MAX_CHAT = 200
 const PER_IP_MS = 20_000
 const GLOBAL_PER_HOUR = 30
@@ -214,6 +215,24 @@ function cleanText(value, max) {
     .replace(/&#39;/gi, "'")
   text = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
   return text.replace(/\s+/g, ' ').trim().slice(0, max)
+}
+
+const RESERVED_CHAT_NAMES = new Set(['hana', 'daniel', 'tenderqwerty'])
+
+function reservedChatKey(name) {
+  return String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function validateChatName(raw) {
+  const name = cleanText(raw ?? '', CHAT_NAME_MAX)
+  if (name.length < CHAT_NAME_MIN || name.length > CHAT_NAME_MAX) {
+    return { error: 'Pick a name between 2 and 20 characters.' }
+  }
+  if (RESERVED_CHAT_NAMES.has(reservedChatKey(name))) {
+    return { error: 'That name is reserved. Please pick another.' }
+  }
+  if (containsBlocked(name)) return { error: BLOCKED_MESSAGE }
+  return { name }
 }
 
 function send(res, statusCode, body, extra = {}) {
@@ -573,12 +592,14 @@ const server = http.createServer(async (req, res) => {
       return send(res, err.message === 'too-large' ? 413 : 400, { error: 'Could not read that message.' })
     }
     const text = cleanText(body.text ?? '', MAX_TEXT)
-    const name = cleanText(body.name ?? '', MAX_NAME) || null
+    const named = validateChatName(body.name ?? '')
+    if (named.error) return send(res, 400, { error: named.error })
+    const name = named.name
     if (!text) return send(res, 400, { error: 'That message was empty.' })
     if (typeof body.text === 'string' && body.text.replace(/<[^>]*>/g, '').trim().length > MAX_TEXT) {
       return send(res, 400, { error: 'Keep it under 300 characters.' })
     }
-    if (containsBlocked(text) || (name && containsBlocked(name))) {
+    if (containsBlocked(text)) {
       return send(res, 400, { error: BLOCKED_MESSAGE })
     }
     const now = Date.now()
@@ -608,6 +629,18 @@ const server = http.createServer(async (req, res) => {
     const out = publicMessage(msg)
     if (!process.env.FORWARD_WEBHOOK_URL || !forwarded) out.message = 'Hana is reading your message…'
     return send(res, 200, out)
+  }
+
+  if (pathname === '/api/chat/name' && method === 'POST') {
+    let body
+    try {
+      body = await readBody(req)
+    } catch (err) {
+      return send(res, err.message === 'too-large' ? 413 : 400, { error: 'Could not read that name.' })
+    }
+    const named = validateChatName(body.name ?? '')
+    if (named.error) return send(res, 400, { error: named.error })
+    return send(res, 200, { name: named.name })
   }
 
   if (pathname === '/api/reply' && method === 'POST') {

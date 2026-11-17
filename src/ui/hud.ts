@@ -27,6 +27,8 @@ export type Actions = {
   closeBubble: (botId: string) => void
   // The "…" nub: shows a read message again, on this page only.
   openBubble: (botId: string, entryId: string) => void
+  getName: () => string | null
+  setName: (name: string) => Promise<string | Error>
 }
 
 // One bot as the HUD shows it, derived from the state (state.ts).
@@ -131,6 +133,7 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
   const signs = new Map<string, HTMLElement>()
   // `open`: the bubble's text is expanded ("more"). Pure DOM state, like a scroll position.
   const bubbles = new Map<string, { node: HTMLElement; key: string; content: string; open: boolean }>()
+  let renaming = false
   const nubs = new Map<string, HTMLElement>()
   const chips = new Map<string, HTMLElement>()
   let drawerKey = ''
@@ -213,6 +216,92 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
     }
   }
 
+  function nameForm(onDone: () => void) {
+    const current = actions.getName()
+    const input = el('input', {
+      type: 'text',
+      maxLength: 20,
+      placeholder: 'Your name',
+      value: current || '',
+    })
+    input.setAttribute('maxlength', '20')
+    input.setAttribute('autocomplete', 'nickname')
+    const err = el('p', { class: 'chat-name-err' })
+    err.hidden = true
+    const confirm = el('button', { class: 'btn sun', type: 'submit', textContent: 'Confirm' })
+    return el(
+      'form',
+      {
+        class: 'chat-name',
+        onsubmit: async (e: Event) => {
+          e.preventDefault()
+          confirm.disabled = true
+          err.hidden = true
+          const result = await actions.setName(input.value)
+          confirm.disabled = false
+          if (result instanceof Error) {
+            err.textContent = result.message
+            err.hidden = false
+            input.focus()
+            return
+          }
+          onDone()
+        },
+      },
+      el('p', { class: 'chat-name-lead', textContent: current ? 'Change the name you chat with.' : 'Pick a name to chat with Hana.' }),
+      el('div', { class: 'chat-name-row' }, input, confirm),
+      err,
+    )
+  }
+
+  function messageForm(botId: string, botName: string, visitor: string) {
+    const input = el('input', { placeholder: `Message ${botName}…`, maxLength: 300, autocomplete: 'off' })
+    const form = el(
+      'form',
+      {
+        onsubmit: async (e: Event) => {
+          e.preventDefault()
+          const text = input.value.trim()
+          if (!text) return
+          input.disabled = true
+          const ok = await actions.send(botId, text)
+          input.disabled = false
+          if (ok) input.value = ''
+        },
+      },
+      input,
+      el('button', { class: 'btn sun', type: 'submit', textContent: 'Send' }),
+    )
+    const as = el(
+      'div',
+      { class: 'chat-as' },
+      el('span', { textContent: `Chatting as ${visitor}` }),
+      el('button', {
+        class: 'chat-as-change',
+        type: 'button',
+        textContent: 'Change',
+        onclick: () => {
+          renaming = true
+          syncComposer()
+          render()
+        },
+      }),
+    )
+    return el('div', { class: 'chat-compose' }, as, form)
+  }
+
+  function syncComposer() {
+    const visitor = actions.getName()
+    const needName = !visitor || renaming
+    namePrompt.hidden = !needName
+    composerWrap.hidden = needName
+    const lead = namePrompt.querySelector('.chat-name-lead')
+    if (lead) lead.textContent = visitor ? 'Change the name you chat with.' : 'Pick a name to chat with Hana.'
+    const input = namePrompt.querySelector('input')
+    if (input && visitor && renaming && !input.value) input.value = visitor
+    if (visitor) asLabel.textContent = `Chatting as ${visitor}`
+  }
+
   // ---------------- bubbles ----------------
   function renderBubbles(v: View) {
     for (const { bot: b, bubble: content } of v.bots) {
@@ -238,29 +327,21 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
       nubs.delete(id)
       const selected = v.selected === id
       const card = content.card
-      const busyKey = JSON.stringify([content.key, content.text, selected, card?.entryId ?? null, content.unread, have?.open ?? false])
+      const visitor = actions.getName()
+      const needName = !visitor || renaming
+      const busyKey = JSON.stringify([content.key, content.text, selected, card?.entryId ?? null, content.unread, have?.open ?? false, visitor, renaming])
       if (have && have.key === busyKey) continue
       const fresh = !have || have.content !== content.key
       const node = have?.node ?? el('div')
       const open = have?.open ?? false
       node.className = `bubble${selected ? ' is-selected' : ''}${content.mine ? ' is-mine' : ''}${card ? ' is-card' : ''}${open ? ' is-open' : ''}${content.text.length < 120 ? ' is-short' : ''}${fresh ? ' bubble-in' : ''}`
-      const input = el('input', { placeholder: `Message ${b.bot.name}…`, maxLength: 300, autocomplete: 'off' })
-      const form = el(
-        'form',
-        {
-          onsubmit: async (e: Event) => {
-            e.preventDefault()
-            const text = input.value.trim()
-            if (!text) return
-            input.disabled = true
-            const ok = await actions.send(id, text)
-            input.disabled = false
-            if (ok) input.value = ''
-          },
-        },
-        input,
-        el('button', { class: 'btn sun', type: 'submit', textContent: 'Send' }),
-      )
+      const composer = needName
+        ? nameForm(() => {
+            renaming = false
+            syncComposer()
+            render()
+          })
+        : messageForm(id, b.bot.name, visitor!)
       const textNode = el('div', { class: 'text', innerHTML: richText(content.text) })
       const more = content.text.length > 160 ? el('button', { class: 'more', textContent: open ? 'less' : 'more', onclick: () => (bubbles.get(id)!.open = !open, render()) }) : null
       const empty = !content.text
@@ -271,13 +352,15 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
         empty ? null : more,
         card ? cardButtons(id, card) : null,
         content.mine ? el('div', { class: 'note', textContent: 'Hana is reading your message…' }) : null,
-        form,
+        composer,
         el('button', {
           class: 'close',
+          type: 'button',
           title: content.unread ? 'Mark read and close' : 'Close',
           ariaLabel: 'Close',
           textContent: '✕',
           onclick: (e: Event) => {
+            e.preventDefault()
             e.stopPropagation()
             actions.closeBubble(id)
           },
@@ -370,9 +453,35 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
       composer.requestSubmit()
     }
   })
+  const asLabel = el('span', { textContent: 'Chatting as' })
+  const composerWrap = el(
+    'div',
+    { class: 'composer-wrap' },
+    el(
+      'div',
+      { class: 'chat-as' },
+      asLabel,
+      el('button', {
+        class: 'chat-as-change',
+        type: 'button',
+        textContent: 'Change',
+        onclick: () => {
+          renaming = true
+          syncComposer()
+          render()
+        },
+      }),
+    ),
+    composer,
+  )
+  const namePrompt = nameForm(() => {
+    renaming = false
+    syncComposer()
+    render()
+  })
   const drawerHead = el('header')
   const drawerBody = el('div', { class: 'body' })
-  drawer.append(drawerHead, drawerBody, composer)
+  drawer.append(drawerHead, drawerBody, namePrompt, composerWrap)
   drawer.addEventListener('pointerdown', (e) => e.stopPropagation())
 
   function renderDrawer(v: View) {
@@ -381,13 +490,17 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
     if (!selected) {
       drawerFor = null
       drawerKey = ''
+      syncComposer()
       return
     }
     const { bot: b, presence: live, pending } = selected
     const id = b.bot.id
     const mood = viewer.mood(id)
-    const key = JSON.stringify([b, mood, live, pending])
-    if (key === drawerKey) return
+    const key = JSON.stringify([b, mood, live, pending, actions.getName(), renaming])
+    if (key === drawerKey) {
+      syncComposer()
+      return
+    }
     drawerKey = key
     if (drawerFor !== id) composerInput.placeholder = `Ask ${b.bot.name} something…`
     drawerFor = id
@@ -441,6 +554,7 @@ export function createHud({ layer, topbar, strip, drawer, toasts, viewer, sound,
       el('section', {}, el('h3', { textContent: 'Recent' }), el('div', { class: 'timeline' }, ...timeline)),
     )
     drawerBody.scrollTop = drawerBody.scrollHeight
+    syncComposer()
   }
 
   function render() {

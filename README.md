@@ -1,6 +1,6 @@
 # Hana's Room
 
-A small page that shows Hana, a soft pink cloud, in a cozy isometric room, with a public-safe status and a chat bubble visitors can use to leave her a message.
+A small page that shows Hana, a soft pink cloud, in a cozy isometric room, with a public-safe status and a chat bubble visitors can use to leave her a message. Visitors pick a username before they can chat; the name is kept in the browser and sent with each message.
 
 The room, art, engine, and interactions are based on [grokhouse](https://github.com/remorses/grokhouse) (MIT). See LICENSE, LICENSE.grokhouse, and THIRD_PARTY_NOTICES. This project does not use grokhouse's sign-in, Grok Bot API, Cursor tokens, or Worker. Status comes from `GET /api/status`. Chat is `POST /api/chat` and `POST /api/reply`.
 
@@ -122,7 +122,8 @@ Public:
 - `GET /api/status`
 - `GET /api/activity` — current task and the last ~10 finished entries (`label`, `started`, `ended`)
 - `GET /api/chat` — last ~30 messages and replies
-- `POST /api/chat` `{ name?, text }` — max 300 characters, HTML stripped, slur filter applied before store or forward, 1 message / 20s per IP, 30 / hour globally
+- `POST /api/chat` `{ name, text }` — a username is required (2-20 characters, slur filter, not Hana/Daniel/TenderQWERTY); text max 300 characters, HTML stripped, slur filter applied before store or forward, 1 message / 20s per IP, 30 / hour globally
+- `POST /api/chat/name` `{ name }` — check a username without sending a message
 - `GET /api/sky` — Houston period and weather, cached 15 minutes
 - `GET /api/guestbook` — recent notes (`id`, `name`, `note`, `ts`) and a persistence hint
 - `POST /api/guestbook` `{ name, note }` — name max 24, note max 200, slur filter, 1 per IP / 10 minutes
@@ -137,4 +138,4 @@ Authenticated (`Authorization: Bearer` with `HANA_ROOM_SECRET`):
 - `DELETE /api/chat` — clear the log
 - `DELETE /api/guestbook/:id` — remove one guestbook note
 
-If `FORWARD_WEBHOOK_URL` is set, new chat messages are also forwarded as `{ id, name, text, ts }` with the `Authorization` header from `FORWARD_WEBHOOK_AUTH`. When those are unset, the message is stored and the page shows "Hana is reading your message…".
+If `FORWARD_WEBHOOK_URL` is set, new chat messages are also forwarded as `{ id, name, text, ts }` with the `Authorization` header from `FORWARD_WEBHOOK_AUTH`. `name` is the visitor's required username. When those are unset, the message is stored and the page shows "Hana is reading your message…".
