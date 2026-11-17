@@ -47,7 +47,9 @@ Click the 80s PC in the room to open a paper window docked under the "Hana's Roo
 
 ## Public log
 
-`./publish-life.sh [YYYY-MM-DD]` (default: today) reads Hana's me-time journal at `/workspace/hana-life/<day>/journal.md` and optional `public-creations.json`, writes `public/life/`, commits only that folder, and pushes. It never reads `log.md`. A privacy filter strips emails, most URLs (suno.com, instagram.com, and this room are allowed), phone numbers, dollar amounts, card or account numbers, and street addresses, and drops any entry or paragraph that mentions Daniel's personal life, family, money, bills, banks, or accounts. If nothing changed, the script exits quietly.
+`./publish-life.sh [YYYY-MM-DD]` (default: today) reads Hana's me-time journal at `/workspace/hana-life/<day>/journal.md` and optional `public-creations.json`, writes `public/life/`, refreshes the corkboard from that day's newest public creations, then commits those public files and pushes. It never reads `log.md`. A privacy filter strips emails, most URLs (suno.com, instagram.com, and this room are allowed), phone numbers, dollar amounts, card or account numbers, and street addresses, and drops any entry or paragraph that mentions Daniel's personal life, family, money, bills, banks, or accounts. If nothing changed, the script exits quietly.
+
+The corkboard refresh pins a hot take (from an optional `hotTake` field or `hot-take.txt`, otherwise a public line taken from that day's notes), the day's creation titles, and a photo if there is a `type: image` creation or a look in `$HANA_INSTAGRAM/<day>/`.
 
 ## Records
 
@@ -64,13 +66,13 @@ The den furniture and the window are Hana's own line-art designs (pink and cream
 
 ## Corkboard
 
-Click the corkboard on the back wall to read Hana's hot take of the day and a few pinned notes. The board is `public/board.json`:
+Click the corkboard on the back wall to read Hana's hot take of the day, a pinned photo when there is one, and a few notes. The board is `public/board.json` (optional `pin` has `src`, `alt`, and `caption`; photos live under `public/board/`):
 
 ```json
-{"hotTake":"A rainy window is just the room asking for a record and a blanket.","date":"2026-11-14","notes":["Water the little flower pot on the shelf."]}
+{"hotTake":"The loneliest whale in the world is a great headline and probably a lie.","date":"2026-11-16","notes":["The 52-Hertz Whale: Reading Notes & Opinions"]}
 ```
 
-To update it (writes the file, commits only that file, and pushes):
+After each me-time session, `./publish-life.sh` refreshes the board automatically from that day's public creations. To update it by hand (writes `public/board.json`, keeps an existing pin photo, commits only that file, and pushes):
 
 ```bash
 ./set-board.sh "A rainy window is just the room asking for a record and a blanket." \

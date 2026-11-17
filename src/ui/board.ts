@@ -1,7 +1,7 @@
-// Corkboard window: Hana's hot take of the day and a few pinned notes.
+// Corkboard window: Hana's hot take of the day, a pinned photo, and a few notes.
 // Cream paper chrome, text nodes only.
 
-import type { BoardData } from '../engine/board-draw.ts'
+import { safeBoardSrc, type BoardData } from '../engine/board-draw.ts'
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> & { class?: string } = {}, ...children: Array<Node | string | null | false | undefined>) {
   const node = document.createElement(tag)
@@ -36,16 +36,30 @@ export function createBoard({ host }: { host: HTMLElement }) {
 
   function paint() {
     body.replaceChildren()
-    if (!data.hotTake && !data.notes.length) {
+    const src = data.pin?.src ? safeBoardSrc(data.pin.src) : null
+    if (!data.hotTake && !data.notes.length && !src) {
       body.append(el('p', { class: 'board-empty', textContent: 'Nothing pinned yet.' }))
       return
     }
-    const take = el('section', { class: 'board-take' })
-    take.append(
-      el('div', { class: 'board-kicker', textContent: data.date ? `Hot take of the day · ${formatDate(data.date)}` : 'Hot take of the day' }),
-      el('p', { class: 'board-quote', textContent: data.hotTake || '…' }),
-    )
-    body.append(take)
+    if (data.hotTake) {
+      const take = el('section', { class: 'board-take' })
+      take.append(
+        el('div', { class: 'board-kicker', textContent: data.date ? `Hot take of the day · ${formatDate(data.date)}` : 'Hot take of the day' }),
+        el('p', { class: 'board-quote', textContent: data.hotTake || '…' }),
+      )
+      body.append(take)
+    }
+    if (src) {
+      const photo = el('figure', { class: 'board-photo' })
+      const img = el('img', {
+        src,
+        alt: data.pin?.alt || 'Pinned photo',
+        decoding: 'async',
+      })
+      photo.append(img)
+      if (data.pin?.caption) photo.append(el('figcaption', { textContent: data.pin.caption }))
+      body.append(photo)
+    }
     if (data.notes.length) {
       const list = el('ul', { class: 'board-notes' })
       for (const note of data.notes) {
@@ -76,7 +90,18 @@ export function createBoard({ host }: { host: HTMLElement }) {
     },
     isOpen: () => open,
     update(next: BoardData | null) {
-      data = next ? { hotTake: String(next.hotTake || ''), date: String(next.date || ''), notes: Array.isArray(next.notes) ? next.notes.map((n) => String(n || '')).filter(Boolean) : [] } : { hotTake: '', date: '', notes: [] }
+      const notes = next && Array.isArray(next.notes) ? next.notes.map((n) => String(n || '')).filter(Boolean) : []
+      const src = next?.pin?.src ? safeBoardSrc(next.pin.src) : null
+      const pin = src
+        ? {
+            src,
+            alt: String(next?.pin?.alt || '').trim() || undefined,
+            caption: String(next?.pin?.caption || '').trim() || undefined,
+          }
+        : undefined
+      data = next
+        ? { hotTake: String(next.hotTake || ''), date: String(next.date || ''), notes, pin }
+        : { hotTake: '', date: '', notes: [] }
       paint()
     },
   }

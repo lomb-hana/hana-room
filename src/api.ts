@@ -29,10 +29,17 @@ export type ActivityFeed = {
   recent: ActivityTask[]
 }
 
+export type BoardPin = {
+  src: string
+  alt?: string
+  caption?: string
+}
+
 export type BoardData = {
   hotTake: string
   date: string
   notes: string[]
+  pin?: BoardPin
 }
 
 export type GuestEntry = {

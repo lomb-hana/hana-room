@@ -13,6 +13,7 @@ import { createStore } from 'zustand/vanilla'
 import { setDither } from './engine/press.ts'
 import type { Kind } from './engine/kinds.ts'
 import { api, type ActivityFeed, type BoardData, type ChatMessage, type RoomState, type RoomStatus } from './api.ts'
+import { safeBoardSrc } from './engine/board-draw.ts'
 import { createTerminal } from './ui/terminal.ts'
 import { createRecords } from './ui/records.ts'
 import { createBoard } from './ui/board.ts'
@@ -320,7 +321,16 @@ async function loadBoard() {
     return
   }
   const notes = Array.isArray(result.notes) ? result.notes.map((n) => String(n || '')).filter(Boolean) : []
-  board = { hotTake: String(result.hotTake || ''), date: String(result.date || ''), notes }
+  const rawPin = result.pin
+  const src = rawPin && typeof rawPin === 'object' ? safeBoardSrc(String(rawPin.src || '')) : null
+  const pin = src
+    ? {
+        src,
+        alt: String(rawPin?.alt || '').trim() || undefined,
+        caption: String(rawPin?.caption || '').trim() || undefined,
+      }
+    : undefined
+  board = { hotTake: String(result.hotTake || ''), date: String(result.date || ''), notes, pin }
   boardUi.update(board)
   viewer.setBoard(board)
 }

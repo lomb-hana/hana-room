@@ -1383,7 +1383,7 @@ textarea {
   left: auto;
   right: max(16px, env(safe-area-inset-right, 0px));
   width: min(360px, calc(100% - 32px));
-  max-height: min(460px, calc(100% - 140px));
+  max-height: min(580px, calc(100% - 140px));
 }
 .board-body,
 .guest-list {
@@ -1447,6 +1447,27 @@ textarea {
   color: var(--coral, #d06);
   font-size: 10px;
   line-height: 1.6;
+}
+.board-photo {
+  margin: 0;
+  padding: 8px 8px 10px;
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 4px;
+}
+.board-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 176px;
+  object-fit: contain;
+  background: #efe6d6;
+  border-radius: 2px;
+}
+.board-photo figcaption {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 /* Closed book on the table opens into a two-page spread. */

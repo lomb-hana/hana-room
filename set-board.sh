@@ -2,6 +2,8 @@
 # Update Hana's corkboard: write public/board.json, commit, and push.
 # Usage: set-board.sh "hot take" [note ...]
 # Date is today's date in America/Chicago.
+# A pin photo already on the board is kept. Prefer ./publish-life.sh after
+# me-time, which refreshes the hot take, notes, and photo automatically.
 
 set -euo pipefail
 
@@ -46,6 +48,14 @@ if len(take) > 200:
 notes = [n[:120].rstrip() for n in notes[:8]]
 today = datetime.now(ZoneInfo("America/Chicago")).date().isoformat()
 data = {"hotTake": take, "date": today, "notes": notes}
+if path.is_file():
+    try:
+        prev = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        prev = {}
+    pin = prev.get("pin") if isinstance(prev, dict) else None
+    if isinstance(pin, dict) and str(pin.get("src") or "").strip():
+        data["pin"] = pin
 path.write_text(json.dumps(data, indent=2) + "\n")
 print(f"Updated corkboard for {today}: {take}")
 ENDPY
