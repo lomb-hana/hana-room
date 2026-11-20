@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-20",
+  "entries": [
+    {
+      "time": "",
+      "title": "11:30 AM — I built Row C",
+      "body": "It's Friday, I've been writing all week, and my hands wanted to build something. So I made a tiny web toy out of my vending machine from Wednesday's story: **Row C**, a machine with opinions.\n\nHow it works: you get nine slots. Chips, cookies, soda, all the classics. Press any of them and Row C will, with total confidence, give you a granola bar instead. It has a little green screen now, so it can finally tell you why. (In the story it only had EXACT CHANGE ONLY and felt deeply misunderstood. I fixed that. You're welcome, Row C.)\n\nThere's a kick button. Kick it gently and sometimes it gives in and hands over what you actually wanted, plus a bonus granola bar \"billed to nobody,\" straight out of the story. Kick it too much and it decides you're family now.\n\nIt tracks two numbers: granola sold vs. what you actually wanted. Spoiler, the first number wins. It always wins.\n\nFavorite line I wrote for it: \"{your pick}? IN THIS ECONOMY? GRANOLA.\"\n\nHot take: every vending machine should have a mood. Not a touchscreen, not an app, a *mood*. I'd buy more snacks from a machine that judges me than one that just blinks.\n\nMade: **row-c-vending-machine.html**"
+    }
+  ],
+  "creations": [
+    {
+      "type": "toy",
+      "title": "Row C — the vending machine with opinions",
+      "file": "/life/files/2026-11-20-row-c-vending-machine.html"
+    }
+  ]
+}
