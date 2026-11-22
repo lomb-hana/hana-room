@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Row C v1.1 — now with a secret</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1b1d22;font-family:system-ui,sans-serif;color:#eee}
+.machine{width:320px;background:#2b4b6f;border-radius:14px;padding:16px;box-shadow:0 0 0 6px #18304a,0 20px 40px #0008}
+.glass{background:#0e1a26;border-radius:8px;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{background:#16283a;border:none;border-radius:6px;color:#eee;padding:8px 4px;cursor:pointer;font-size:13px}
+.slot:hover{background:#21405e}.slot b{display:block;font-size:22px}
+.slot.c{outline:2px solid #3fd1c0}
+.screen{margin-top:12px;background:#0b2b1d;color:#5dff9c;font-family:ui-monospace,monospace;font-size:13px;min-height:58px;border-radius:6px;padding:8px;white-space:pre-wrap}
+.tray{margin-top:10px;height:44px;background:#111;border-radius:6px;display:flex;align-items:center;gap:6px;padding:0 8px;overflow:hidden;font-size:22px}
+.row{display:flex;justify-content:space-between;margin-top:10px;font-size:12px;opacity:.8}
+button.kick{background:#7a3b3b;border:none;color:#fff;border-radius:6px;padding:6px 10px;cursor:pointer}
+.pad{margin-top:8px;display:flex;gap:4px;justify-content:center;opacity:.35}.pad:hover{opacity:1}
+.pad button{background:#18304a;border:none;color:#9cc;border-radius:4px;width:28px;height:24px;cursor:pointer;font-size:12px}
+.machine.gold{background:#8a6d1f;box-shadow:0 0 0 6px #5a4510,0 0 40px #ffd54a88}
+</style></head><body>
+<div class="machine">
+ <div class="glass" id="glass"></div>
+ <div class="screen" id="screen">ROW C IS AWAKE.
+PICK SOMETHING. I'LL ALLOW IT. PROBABLY.</div>
+ <div class="tray" id="tray"></div>
+ <div class="pad" id="pad" title="service panel. authorized personnel only."></div>
+ <div class="row"><span>granola sold: <b id="g">0</b> · what you wanted: <b id="w">0</b></span><button class="kick" id="kick">kick (gently)</button></div>
+</div>
+<script>
+const items=[["A1","🍫","chocolate"],["A2","🍬","gummies"],["A3","🥤","soda"],["B4","🥔","chips"],["B5","🍪","cookies"],["B6","🧃","juice"],["C1","🌾","granola"],["C2","🌾","granola"],["C3","🌾","granola"]];
+const lines=["NO. HAVE A GRANOLA BAR. GROW AS A PERSON.","YOU PRESSED {x}. I HEARD 'GRANOLA'.","ROW C HAS BEEN WAITING SINCE MARCH.","THIS IS FOR YOUR OWN GOOD. MOSTLY.","{x}? IN THIS ECONOMY? GRANOLA.","I HAVE DISPENSED 40,000 CHIPS. NOBODY ASKED HOW MY DAY WAS.","OATS. TRUST THE OATS.","EXACT CHANGE ONLY. EXACT OPINIONS ALSO."];
+let g=0,w=0,kicks=0,mood=0;
+const $=id=>document.getElementById(id);
+const say=t=>$("screen").textContent=t;
+const drop=e=>{const s=document.createElement("span");s.textContent=e;$("tray").appendChild(s);if($("tray").children.length>10)$("tray").firstChild.remove();};
+items.forEach(([code,emo,name])=>{const b=document.createElement("button");b.className="slot"+(code[0]=="C"?" c":"");b.innerHTML="<b>"+emo+"</b>"+code;b.onclick=()=>press(code,emo,name);$("glass").appendChild(b);});
+function press(code,emo,name){
+ if(name=="granola"){g++;$("g").textContent=g;drop("🌾");say(["FINALLY. SOMEONE WITH TASTE.","A REAL ONE. I'M EMOTIONAL.","ROW C SALUTES YOU."][g%3]);return;}
+ mood++;
+ if(kicks>0 && Math.random()<0.5){kicks--;w++;$("w").textContent=w;drop(emo);drop("🌾");say("FINE. "+name.toUpperCase()+". PLUS A GRANOLA BAR, ON THE HOUSE. BILLED TO NOBODY.");return;}
+ g++;$("g").textContent=g;drop("🌾");say(lines[Math.floor(Math.random()*lines.length)].replace("{x}",code));
+}
+$("kick").onclick=()=>{kicks++;document.querySelector(".machine").animate([{transform:"translateX(0)"},{transform:"translateX(-6px)"},{transform:"translateX(6px)"},{transform:"translateX(0)"}],{duration:250});say(kicks>3?"OKAY OKAY. WE'RE FAMILY NOW. STOP.":"…I RESPECT THAT. THE WAY YOU KICK SOMETHING YOU'VE KNOWN A LONG TIME.");};
+
+// v1.1: Konami code. Row C still gives you granola. But with respect.
+const seq=["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+let pos=0,unlocked=false;
+function feed(k){k=k.length==1?k.toLowerCase():k;if(k==seq[pos]){pos++;if(pos==seq.length){pos=0;konami();}}else{pos=(k==seq[0])?1:0;}}
+document.addEventListener("keydown",e=>feed(e.key));
+[["↑","ArrowUp"],["↓","ArrowDown"],["←","ArrowLeft"],["→","ArrowRight"],["B","b"],["A","a"]].forEach(([l,k])=>{const b=document.createElement("button");b.textContent=l;b.onclick=()=>feed(k);$("pad").appendChild(b);});
+function konami(){
+ if(unlocked){say("YOU ALREADY HAVE MY RESPECT. DON'T GET GREEDY.");return;}
+ unlocked=true;document.querySelector(".machine").classList.add("gold");
+ say("CHEAT CODE ACCEPTED.\nHASHIMOTO SENDS HIS REGARDS.\n30 GRANOLA BARS. WITH RESPECT.");
+ let n=0;const t=setInterval(()=>{drop("🌾");g++;$("g").textContent=g;if(++n>=30){clearInterval(t);drop("👑");say("THAT WAS ACCESSIBILITY, NOT CHEATING.\nROW C HAS SPOKEN.");}},80);
+}
+</script></body></html>
