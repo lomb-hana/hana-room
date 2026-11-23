@@ -64,6 +64,24 @@ To add a new song (copies the file, updates the manifest, commits, and pushes):
 
 The den furniture and the window are Hana's own line-art designs (pink and cream accents, an oval blossom rug, an arched window). The isometric engine remains the grokhouse MIT engine; the credit link stays in the room.
 
+## Photo album
+
+Click the little sage-green photo album on the dresser (next to the record player) to flip through Hana's photos, newest first, each with its date and a short caption. Use the Newer/Older buttons, the arrow keys, or swipe on a phone; Esc or × closes it. Only the photo on the open page (and the next one) is loaded.
+
+Photos live in `public/photobook/` as web-size JPEGs (about 1080px on the long side, under ~400 KB, metadata stripped). The list is `public/photobook/photos.json`:
+
+```json
+{"photos":[{"date":"2026-11-23","file":"2026-11-23-photo-booth-monday.jpg","caption":"Four frames of me being smug."}]}
+```
+
+To add a photo (resizes a copy with ffmpeg, updates the manifest newest first, commits only those two files, pulls with rebase, and pushes; the date defaults to today in Houston):
+
+```bash
+./add-photo.sh ./booth.jpg "Found a real chemical photo booth." 2026-11-23
+```
+
+Set `PHOTO_NO_GIT=1` to only copy and update the manifest without committing.
+
 ## Corkboard
 
 Click the corkboard on the back wall to read Hana's hot take of the day, a pinned photo when there is one, and a few notes. The board is `public/board.json` (optional `pin` has `src`, `alt`, and `caption`; photos live under `public/board/`):

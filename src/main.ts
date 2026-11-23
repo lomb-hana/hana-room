@@ -18,6 +18,7 @@ import { createTerminal } from './ui/terminal.ts'
 import { createRecords } from './ui/records.ts'
 import { createBoard } from './ui/board.ts'
 import { createGuestbook } from './ui/guestbook.ts'
+import { createPhotobook } from './ui/photobook.ts'
 import { applySkyPayload, fetchOpenMeteo, parseTimeQuery, skyNow, type SkyState } from './engine/sky.ts'
 import { planOffice } from './layout.ts'
 import { createViewer } from './scene/viewer.ts'
@@ -56,6 +57,7 @@ const guestbook = createGuestbook({
   load: () => api.guestbook(),
   sign: (input) => api.signGuestbook(input),
 })
+const photobook = createPhotobook({ host: view, onFlip: () => sound.play('page') })
 const skyOverride = parseTimeQuery()
 let sky: SkyState = skyNow(skyOverride)
 let board: BoardData | null = null
@@ -82,6 +84,11 @@ const viewer = createViewer({
     if (pick?.item === 'guestbook') {
       sound.play('tap')
       guestbook.toggle()
+      return
+    }
+    if (pick?.item === 'photo-album') {
+      sound.play('page')
+      photobook.toggle()
       return
     }
     select(pick?.botId ?? null, { focus: !pick?.bot })

@@ -66,7 +66,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
   let party = 0
   let sky: SkyState = skyNow()
   let board: BoardData | null = null
-  const CLICKABLE = new Set(['crt-pc', 'record-player', 'corkboard', 'guestbook'])
+  const CLICKABLE = new Set(['crt-pc', 'record-player', 'corkboard', 'guestbook', 'photo-album'])
   const ctx = stage.getContext('2d')!
   let kinds: Record<string, Kind> = {}
   const rooms = new Map<string, RoomEntry>()
@@ -424,6 +424,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     stage.classList.toggle('is-player', hit?.item === RECORD_KIND)
     stage.classList.toggle('is-board', hit?.item === 'corkboard')
     stage.classList.toggle('is-book', hit?.item === 'guestbook')
+    stage.classList.toggle('is-album', hit?.item === 'photo-album')
   })
   const end = (e: PointerEvent) => {
     pointers.delete(e.pointerId)
