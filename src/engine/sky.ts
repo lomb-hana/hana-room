@@ -205,3 +205,62 @@ export function skyKey(sky: SkyState) {
   return `${sky.period}|${sky.weather}|${Math.round(sky.cloud * 8)}`
 }
 
+
+// Autumn leaves drifting past the window, Houston-style late (mid-October to
+// early December). Original little almond-shaped leaves drawn on the canvas.
+export function isLeafSeason(at = new Date(), search = typeof location !== 'undefined' ? location.search : ''): boolean {
+  const q = new URLSearchParams(search.startsWith('?') ? search : `?${search}`)
+  const s = (q.get('season') || '').toLowerCase()
+  if (s === 'autumn' || s === 'fall') return true
+  if (s) return false
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: HOUSTON_TZ, month: 'numeric', day: 'numeric' }).formatToParts(at)
+  const m = Number(parts.find((p) => p.type === 'month')?.value ?? 0)
+  const d = Number(parts.find((p) => p.type === 'day')?.value ?? 0)
+  return (m === 10 && d >= 15) || m === 11 || (m === 12 && d <= 7)
+}
+
+const LEAF_COLORS = ['rgba(214, 112, 46, A)', 'rgba(178, 64, 38, A)', 'rgba(222, 168, 52, A)', 'rgba(150, 92, 40, A)']
+
+export function drawLeaves(H: Hand, pane: Vec[], t: number, sky: SkyState, reduced: boolean, season: boolean) {
+  if (!season) return
+  const ctx = H.ctx()
+  const c = pane.reduce((a, p) => [a[0] + p[0] / pane.length, a[1] + p[1] / pane.length] as Vec, [0, 0] as Vec)
+  const alpha = sky.period === 'night' ? 0.55 : 0.9
+  const gust = sky.weather === 'rain' ? 1.6 : 1
+  ctx.save()
+  ctx.beginPath()
+  pane.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
+  ctx.closePath()
+  ctx.clip()
+  const n = reduced ? 3 : 5
+  for (let k = 0; k < n; k++) {
+    const seed = k * 23.71 + 3.3
+    const speed = (7 + (seed % 5)) * gust
+    const span = 44
+    const fall = reduced ? (seed * 11) % span : (t * speed + seed * 9) % span
+    const y = c[1] - 22 + fall
+    const sway = reduced ? 0 : Math.sin(t * 1.3 + seed) * 5
+    const x = c[0] - 20 + ((seed * 17) % 40) + sway + fall * 0.25 * gust
+    const rot = reduced ? seed : t * (1.1 + (k % 3) * 0.4) + seed
+    const col = LEAF_COLORS[k % LEAF_COLORS.length].replace('A', String(alpha))
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(rot)
+    ctx.scale(1, 0.55 + 0.45 * Math.abs(Math.cos(rot * 0.7)))
+    ctx.fillStyle = col
+    ctx.beginPath()
+    ctx.moveTo(-3.2, 0)
+    ctx.quadraticCurveTo(0, -2.4, 3.2, 0)
+    ctx.quadraticCurveTo(0, 2.4, -3.2, 0)
+    ctx.fill()
+    ctx.strokeStyle = `rgba(90, 50, 25, ${alpha * 0.7})`
+    ctx.lineWidth = 0.45
+    ctx.beginPath()
+    ctx.moveTo(-3.6, 0)
+    ctx.lineTo(2.6, 0)
+    ctx.stroke()
+    ctx.restore()
+  }
+  ctx.restore()
+}
+

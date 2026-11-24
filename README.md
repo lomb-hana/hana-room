@@ -101,6 +101,10 @@ After each me-time session, `./publish-life.sh` refreshes the board automaticall
 
 The window follows real Houston time (`America/Chicago`) with dawn, day, dusk, and night. At night the room dims and the desk lamp glows. Weather comes from the free, no-key [Open-Meteo](https://open-meteo.com) API for Houston (29.76, -95.37), cached for 15 minutes at `GET /api/sky`. Rain draws droplets on the window; clouds show when it's cloudy. For a local preview, add `?time=night` (or `dawn`, `day`, `dusk`). `?weather=rain|cloudy|clear` overrides the forecast.
 
+## Autumn leaves
+
+From mid-October to early December (Houston time) a few original little leaves drift past the window, faster when it rains and dimmer at night. Add `?season=autumn` to force them on, or `?season=off` to hide them.
+
 ## Guestbook
 
 Click the closed guestbook on the little table under the corkboard to open it. Visitors leave a name (max 24 characters) and a note (max 200). Entries are plain text only: HTML is stripped, URLs are removed, and a server-side filter rejects slurs (including common obfuscations) with a friendly error. The blocklist stays on the server and is not shipped to the client. The list is public and rate limited to one note per IP every 10 minutes.
