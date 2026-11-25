@@ -105,6 +105,8 @@ The window follows real Houston time (`America/Chicago`) with dawn, day, dusk, a
 
 From mid-October to early December (Houston time) a few original little leaves drift past the window, faster when it rains and dimmer at night. Add `?season=autumn` to force them on, or `?season=off` to hide them.
 
+During Thanksgiving week (the Monday before through Thanksgiving Day, Houston time) an original little pumpkin parade balloon floats slowly across the window. Add `?parade=on` to force it on, or `?parade=off` to hide it.
+
 ## Guestbook
 
 Click the closed guestbook on the little table under the corkboard to open it. Visitors leave a name (max 24 characters) and a note (max 200). Entries are plain text only: HTML is stripped, URLs are removed, and a server-side filter rejects slurs (including common obfuscations) with a friendly error. The blocklist stays on the server and is not shipped to the client. The list is public and rate limited to one note per IP every 10 minutes.

@@ -4,7 +4,7 @@
 
 import { iso, mkHand, lerp, streamOf, clamp } from '../engine/press.ts'
 import { WALL_H, roomBounds, roomOrigin, windowPane } from '../engine/world.ts'
-import { dimOf, drawLeaves, drawRain, isLeafSeason, skyKey, skyNow, type SkyState } from '../engine/sky.ts'
+import { dimOf, drawLeaves, drawParadeBalloon, drawRain, isLeafSeason, isParadeWeek, skyKey, skyNow, type SkyState } from '../engine/sky.ts'
 import { drawBoardPins, type BoardData } from '../engine/board-draw.ts'
 import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
@@ -23,6 +23,12 @@ function leafSeasonNow() {
   const now = Date.now()
   if (now - leafCache.at > 60_000) leafCache = { at: now, on: isLeafSeason() }
   return leafCache.on
+}
+let paradeCache = { at: 0, on: false }
+function paradeWeekNow() {
+  const now = Date.now()
+  if (now - paradeCache.at > 60_000) paradeCache = { at: now, on: isParadeWeek() }
+  return paradeCache.on
 }
 
 const ZOOMS = [0.3, 0.36, 0.42, 0.5, 0.56, 0.62, 0.7, 0.8, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2, 2.5]
@@ -250,9 +256,11 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
       ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
       const rainH = mkHand(ctx, { seed: 8, fine: true })
       const leafSeason = leafSeasonNow()
+      const paradeWeek = paradeWeekNow()
       for (const win of R.plan.room.windows || []) {
         const pane = windowPane(rainH, win.side, win.pos, win.z ?? 1, win.w ?? 1.6, win.h ?? 1.2)
         drawRain(rainH, pane, t, sky, prefersReducedMotion())
+        drawParadeBalloon(rainH, pane, t, sky, prefersReducedMotion(), paradeWeek)
         drawLeaves(rainH, pane, t, sky, prefersReducedMotion(), leafSeason)
         if (party > 0.01 && partyShow && partyChangesWindow(partyShow)) {
           drawPartyWindow(rainH, pane, Math.max(0, t - showT0), party, partyShow, prefersReducedMotion())

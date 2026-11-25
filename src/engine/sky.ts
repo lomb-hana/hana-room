@@ -264,3 +264,87 @@ export function drawLeaves(H: Hand, pane: Vec[], t: number, sky: SkyState, reduc
   ctx.restore()
 }
 
+
+// Thanksgiving parade week: one original little pumpkin balloon (with a tiny
+// leaf on top and tether lines) floats slowly across the window, from the
+// Monday before Thanksgiving through Thanksgiving Day (Houston time).
+// ?parade=on forces it on, ?parade=off hides it.
+export function isParadeWeek(at = new Date(), search = typeof location !== 'undefined' ? location.search : ''): boolean {
+  const q = new URLSearchParams(search.startsWith('?') ? search : `?${search}`)
+  const p = (q.get('parade') || '').toLowerCase()
+  if (p === 'on' || p === '1') return true
+  if (p) return false
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: HOUSTON_TZ, year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(at)
+  const y = Number(parts.find((x) => x.type === 'year')?.value ?? 0)
+  const m = Number(parts.find((x) => x.type === 'month')?.value ?? 0)
+  const d = Number(parts.find((x) => x.type === 'day')?.value ?? 0)
+  if (m !== 11) return false
+  const firstDow = new Date(Date.UTC(y, 10, 1)).getUTCDay() // 0 = Sunday
+  const thanksgiving = 1 + ((4 - firstDow + 7) % 7) + 21
+  return d >= thanksgiving - 3 && d <= thanksgiving
+}
+
+export function drawParadeBalloon(H: Hand, pane: Vec[], t: number, sky: SkyState, reduced: boolean, on: boolean) {
+  if (!on) return
+  const ctx = H.ctx()
+  const xs = pane.map((p) => p[0])
+  const ys = pane.map((p) => p[1])
+  const x0 = Math.min(...xs)
+  const x1 = Math.max(...xs)
+  const yTop = Math.min(...ys)
+  const yBot = Math.max(...ys)
+  const w = x1 - x0 + 40
+  const alpha = sky.period === 'night' ? 0.6 : 0.95
+  const cycle = 46 // seconds per pass
+  const u = reduced ? 0.55 : (t % cycle) / cycle
+  const x = x0 - 20 + u * w
+  const y = yTop + (yBot - yTop) * 0.34 + (reduced ? 0 : Math.sin(t * 0.9) * 1.6)
+  const tilt = reduced ? 0 : Math.sin(t * 0.6) * 0.08
+  ctx.save()
+  ctx.beginPath()
+  pane.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
+  ctx.closePath()
+  ctx.clip()
+  // tether lines trailing down and back toward the (unseen) street
+  ctx.strokeStyle = `rgba(70, 60, 55, ${alpha * 0.55})`
+  ctx.lineWidth = 0.4
+  for (const dx of [-3, 0, 3]) {
+    ctx.beginPath()
+    ctx.moveTo(x + dx, y + 5)
+    ctx.quadraticCurveTo(x + dx - 3, y + 14, x + dx - 6, yBot + 4)
+    ctx.stroke()
+  }
+  ctx.translate(x, y)
+  ctx.rotate(tilt)
+  // pumpkin body: three puffy lobes
+  const lobes: Array<[number, number, string]> = [[-3.4, 4.2, 'rgba(214, 108, 40, A)'], [3.4, 4.2, 'rgba(214, 108, 40, A)'], [0, 4.8, 'rgba(232, 128, 52, A)']]
+  for (const [lx, r, col] of lobes) {
+    ctx.fillStyle = col.replace('A', String(alpha))
+    ctx.beginPath()
+    ctx.ellipse(lx, 0, r, 5, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.strokeStyle = `rgba(120, 55, 25, ${alpha * 0.6})`
+  ctx.lineWidth = 0.45
+  for (const lx of [-1.9, 1.9]) {
+    ctx.beginPath()
+    ctx.moveTo(lx, -4.4)
+    ctx.quadraticCurveTo(lx * 1.3, 0, lx, 4.4)
+    ctx.stroke()
+  }
+  // shine
+  ctx.fillStyle = `rgba(255, 236, 200, ${alpha * 0.45})`
+  ctx.beginPath()
+  ctx.ellipse(-1.2, -2.4, 1.1, 0.6, -0.4, 0, Math.PI * 2)
+  ctx.fill()
+  // stem and a tiny leaf
+  ctx.fillStyle = `rgba(96, 72, 40, ${alpha})`
+  ctx.fillRect(-0.6, -6.6, 1.2, 2)
+  ctx.fillStyle = `rgba(98, 140, 70, ${alpha})`
+  ctx.beginPath()
+  ctx.moveTo(0.4, -6)
+  ctx.quadraticCurveTo(2.6, -7.8, 3.6, -5.8)
+  ctx.quadraticCurveTo(2, -5, 0.4, -6)
+  ctx.fill()
+  ctx.restore()
+}
