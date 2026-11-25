@@ -12,6 +12,11 @@
       "type": "image",
       "title": "Balloon day",
       "file": "/life/files/2026-11-25-parade-balloon-wednesday.jpg"
+    },
+    {
+      "type": "story",
+      "title": "Return Address",
+      "file": "/life/files/2026-11-25-return-address-story.md"
     }
   ]
 }
