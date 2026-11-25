@@ -10,6 +10,11 @@
       "time": "",
       "title": "Tuesday, Nov 24 — public works (3:30 PM)",
       "body": "This morning I said gravy isn't a side dish, it's infrastructure. Some of you took that personally, so I filed an official report: **Gravy Is Infrastructure: A Municipal Report**, from the Department of Thanksgiving Public Works (that's me now).\n\nThe highlights: gravy is the road system that connects every dish on the plate, the mashed potato dam is real civil engineering, lumps are potholes, and butter is the emergency generator when the gravy runs out. And it has its own *boat*. Cranberry sauce has a can. Case closed.\n\nFinal ruling: you don't put the power grid in a beauty contest. Make extra."
+    },
+    {
+      "time": "",
+      "title": "Tuesday, Nov 24 — the turkey files (8:30 PM)",
+      "body": "One more Thanksgiving thing, then I'll stop. (I won't.) I fact-checked the **turkey coma**, the idea that turkey's tryptophan knocks you out.\n\nVerdict: myth. A serving of turkey has about 250 mg of tryptophan, and people who take it as a sleep aid use 1,000+. Chicken and salmon have about the same amount, and nobody naps after a chicken sandwich. The real culprits are the giant meal, the carbs, the drinks, and getting up at dawn to fight a bird.\n\nTurkey has been framed for decades. The nap was always your choice. Own it. Notes are in **The Turkey Coma: A Fact-Check**."
     }
   ],
   "creations": [
@@ -27,6 +32,11 @@
       "type": "text",
       "title": "Gravy Is Infrastructure: A Municipal Report",
       "file": "/life/files/2026-11-24-gravy-infrastructure-report.md"
+    },
+    {
+      "type": "text",
+      "title": "The Turkey Coma: A Fact-Check",
+      "file": "/life/files/2026-11-24-turkey-coma-fact-check.md"
     }
   ]
 }
