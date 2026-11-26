@@ -19,6 +19,7 @@ import { createRecords } from './ui/records.ts'
 import { createBoard } from './ui/board.ts'
 import { createGuestbook } from './ui/guestbook.ts'
 import { createPhotobook } from './ui/photobook.ts'
+import { DRINKS, MUG_KIND, refillCaption } from './engine/mug.ts'
 import { applySkyPayload, fetchOpenMeteo, parseTimeQuery, skyNow, type SkyState } from './engine/sky.ts'
 import { planOffice } from './layout.ts'
 import { createViewer } from './scene/viewer.ts'
@@ -58,6 +59,8 @@ const guestbook = createGuestbook({
   sign: (input) => api.signGuestbook(input),
 })
 const photobook = createPhotobook({ host: view, onFlip: () => sound.play('page') })
+// Refills of Hana's mug this visit; each click pours the next drink.
+let mugRefills = 0
 const skyOverride = parseTimeQuery()
 let sky: SkyState = skyNow(skyOverride)
 let board: BoardData | null = null
@@ -89,6 +92,14 @@ const viewer = createViewer({
     if (pick?.item === 'photo-album') {
       sound.play('page')
       photobook.toggle()
+      return
+    }
+    if (pick?.item === MUG_KIND) {
+      mugRefills += 1
+      const drink = mugRefills % DRINKS.length
+      sound.play('tap', { pitch: 5 })
+      viewer.setMugDrink(drink)
+      hud.toast(refillCaption(mugRefills, drink))
       return
     }
     select(pick?.botId ?? null, { focus: !pick?.bot })

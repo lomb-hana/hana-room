@@ -83,7 +83,8 @@ textarea {
 #stage.is-player,
 #stage.is-board,
 #stage.is-book,
-#stage.is-album {
+#stage.is-album,
+#stage.is-mug {
   cursor: pointer;
 }
 #stage.is-drag {

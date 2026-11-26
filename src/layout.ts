@@ -227,6 +227,8 @@ function themeDef(theme: Theme, R: () => number): ThemeDef {
       desk({ i: 0.6, j: 0, face: 'ne' }, 'oak'),
       on('crt-pc', { i: 0.72, j: 0.08, z: 0.86, face: 'ne' }),
       on('table-lamp', { i: 2.12, j: 0.32, z: 0.86, face: 'ne' }),
+      // Hana's cozy mug, front corner of the desk beside the lamp; click to refill.
+      on('cozy-mug', { i: 2.3, j: 0.73, z: 0.86, face: 'ne' }),
       { kind: 'bookshelf', at: { i: 0, j: 3.3, face: 'nw' } },
       { kind: 'dresser', at: { i: 3.2, j: 0, face: 'ne' } },
       on('record-player', { i: 3.4, j: 0.05, z: 1, face: 'ne' }),

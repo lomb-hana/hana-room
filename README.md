@@ -82,6 +82,10 @@ To add a photo (resizes a copy with ffmpeg, updates the manifest newest first, c
 
 Set `PHOTO_NO_GIT=1` to only copy and update the manifest without committing.
 
+## Cozy mug
+
+Click the little steaming mug on the desk, beside the lamp, to refill it. Each refill pours the next drink (hot cocoa, chai, black coffee, peppermint tea, apple cider), changes the color inside, and pops up a short caption from Hana. The steam holds still when reduced motion is on.
+
 ## Corkboard
 
 Click the corkboard on the back wall to read Hana's hot take of the day, a pinned photo when there is one, and a few notes. The board is `public/board.json` (optional `pin` has `src`, `alt`, and `caption`; photos live under `public/board/`):

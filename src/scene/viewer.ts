@@ -10,6 +10,7 @@ import { depthOf, drawThing, screenBox, type Kind } from '../engine/kinds.ts'
 import { drawBase, layerOf } from '../engine/scene.ts'
 import { CRT_KIND, drawCrtScreen } from '../engine/crt.ts'
 import { RECORD_KIND, drawPlayingRecord } from '../engine/turntable.ts'
+import { MUG_KIND, drawMug } from '../engine/mug.ts'
 import { drawMascot, BODY, type Look } from '../engine/mascot.ts'
 import { createActor, poke, poseOf, setDanceHard, setDancing, setLive, step, type Actor } from './actors.ts'
 import { drawParty, drawPartyCrt, drawPartyWindow, partyChangesWindow, partyFlashesCrt, partyShowFromQuery, pickPartyShow, prefersReducedMotion, type PartyShow } from '../engine/party.ts'
@@ -80,7 +81,8 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
   let party = 0
   let sky: SkyState = skyNow()
   let board: BoardData | null = null
-  const CLICKABLE = new Set(['crt-pc', 'record-player', 'corkboard', 'guestbook', 'photo-album'])
+  let mug = { drink: 0, at: -99 }
+  const CLICKABLE = new Set(['crt-pc', 'record-player', 'corkboard', 'guestbook', 'photo-album', MUG_KIND])
   const ctx = stage.getContext('2d')!
   let kinds: Record<string, Kind> = {}
   const rooms = new Map<string, RoomEntry>()
@@ -299,6 +301,12 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
           }
           ctx.restore()
         }
+        if (th.it!.kind === MUG_KIND) {
+          ctx.save()
+          ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
+          drawMug(mkHand(ctx, { seed: 6, fine: true }), th.it!, kinds[th.it!.kind], t, mug.drink, t - mug.at, prefersReducedMotion())
+          ctx.restore()
+        }
         if (th.it!.kind === RECORD_KIND && (musicOn() || party > 0.02)) {
           ctx.save()
           ctx.setTransform(zr(), 0, 0, zr(), Math.round(devX(R.ox)), Math.round(devY(R.oy)))
@@ -443,6 +451,7 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     stage.classList.toggle('is-board', hit?.item === 'corkboard')
     stage.classList.toggle('is-book', hit?.item === 'guestbook')
     stage.classList.toggle('is-album', hit?.item === 'photo-album')
+    stage.classList.toggle('is-mug', hit?.item === MUG_KIND)
   })
   const end = (e: PointerEvent) => {
     pointers.delete(e.pointerId)
@@ -589,6 +598,10 @@ export function createViewer({ view, stage, onPick }: { view: HTMLElement; stage
     },
     setBoard(next: BoardData | null) {
       board = next
+    },
+    // A refill: the mug shows drink `drink` (index into DRINKS) with a little ripple.
+    setMugDrink(drink: number) {
+      mug = { drink, at: clock }
     },
     setLive(botId: string, live: Presence) {
       const a = actors.get(botId)
