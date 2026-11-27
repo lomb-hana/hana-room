@@ -348,3 +348,81 @@ export function drawParadeBalloon(H: Hand, pane: Vec[], t: number, sky: SkyState
   ctx.fill()
   ctx.restore()
 }
+
+
+// Holiday fairy lights: a string of original little twinkling bulbs draped
+// along the window's arch, from the day after Thanksgiving (Houston time)
+// through Jan 6. Brighter with a soft halo at dusk and night; steady (no
+// twinkle) with reduced motion. ?lights=on forces them on, ?lights=off hides them.
+export function isLightsSeason(at = new Date(), search = typeof location !== 'undefined' ? location.search : ''): boolean {
+  const q = new URLSearchParams(search.startsWith('?') ? search : `?${search}`)
+  const l = (q.get('lights') || '').toLowerCase()
+  if (l === 'on' || l === '1') return true
+  if (l) return false
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: HOUSTON_TZ, year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(at)
+  const y = Number(parts.find((x) => x.type === 'year')?.value ?? 0)
+  const m = Number(parts.find((x) => x.type === 'month')?.value ?? 0)
+  const d = Number(parts.find((x) => x.type === 'day')?.value ?? 0)
+  if (m === 12) return true
+  if (m === 1) return d <= 6
+  if (m !== 11) return false
+  const firstDow = new Date(Date.UTC(y, 10, 1)).getUTCDay()
+  const thanksgiving = 1 + ((4 - firstDow + 7) % 7) + 21
+  return d > thanksgiving
+}
+
+const BULB_COLORS = ['255, 196, 92', '255, 120, 140', '140, 210, 255', '170, 235, 150', '255, 236, 170']
+
+export function drawFairyLights(H: Hand, pane: Vec[], t: number, sky: SkyState, reduced: boolean, on: boolean) {
+  if (!on || pane.length < 6) return
+  const ctx = H.ctx()
+  const c = pane.reduce((a, p) => [a[0] + p[0] / pane.length, a[1] + p[1] / pane.length] as Vec, [0, 0] as Vec)
+  // the arch: from the right body top, over the curve, to the left body top
+  const arch = pane.slice(2)
+  const out = (p: Vec, k: number): Vec => {
+    const dx = p[0] - c[0]
+    const dy = p[1] - c[1]
+    const len = Math.hypot(dx, dy) || 1
+    return [p[0] + (dx / len) * k, p[1] + (dy / len) * k]
+  }
+  const pts = arch.map((p) => out(p, 1.6))
+  const dark = sky.period === 'night' || sky.period === 'dusk'
+  const dim = sky.period === 'night' ? 1 : sky.period === 'dusk' ? 0.85 : 0.6
+  ctx.save()
+  // the wire, sagging a little between anchor points
+  ctx.strokeStyle = 'rgba(60, 70, 55, 0.7)'
+  ctx.lineWidth = 0.4
+  ctx.beginPath()
+  pts.forEach((p, i) => {
+    if (!i) return ctx.moveTo(p[0], p[1])
+    const q = pts[i - 1]
+    ctx.quadraticCurveTo((p[0] + q[0]) / 2, (p[1] + q[1]) / 2 + 1.4, p[0], p[1])
+  })
+  ctx.stroke()
+  // bulbs hang at each sag
+  for (let i = 1; i < pts.length; i++) {
+    const q = pts[i - 1]
+    const p = pts[i]
+    const bx = (p[0] + q[0]) / 2
+    const by = (p[1] + q[1]) / 2 + 1.1
+    const col = BULB_COLORS[i % BULB_COLORS.length]
+    const tw = reduced ? 1 : 0.55 + 0.45 * Math.max(0, Math.sin(t * (1.4 + (i % 4) * 0.35) + i * 2.1))
+    const a = dim * tw
+    if (dark) {
+      const g = ctx.createRadialGradient(bx, by + 0.8, 0, bx, by + 0.8, 4.2)
+      g.addColorStop(0, `rgba(${col}, ${0.45 * a})`)
+      g.addColorStop(1, `rgba(${col}, 0)`)
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.arc(bx, by + 0.8, 4.2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.fillStyle = 'rgba(60, 70, 55, 0.8)'
+    ctx.fillRect(bx - 0.35, by - 0.4, 0.7, 0.6)
+    ctx.fillStyle = `rgba(${col}, ${Math.max(0.45, a)})`
+    ctx.beginPath()
+    ctx.ellipse(bx, by + 0.9, 0.65, 0.95, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.restore()
+}
